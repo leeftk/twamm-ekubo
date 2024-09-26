@@ -1,41 +1,29 @@
-use starknet::ContractAddress;
+use starknet::{ContractAddress, storage_access::{StorePacking}};
 use core::option::OptionTrait;
 use core::result::ResultTrait;
-use std::convert::TryFrom;
+use core::traits::TryInto;
 
-//define the order key struct
-#[derive(Copy, Drop, Serde)]
-struct OrderKey {
-    sell_token: ContractAddress,
-    buy_token: ContractAddress,
-    start: u64,
-    end: u64,
+#[derive(Drop, Copy, Serde, Hash)]
+pub struct OrderKey {
+    // The first token sorted by address
+    pub token0: ContractAddress,
+    // The second token sorted by address
+    pub token1: ContractAddress,
+    // The price at which the token should be bought/sold. Must be a multiple of 100. If even,
+    // selling token1.
+    pub tick: u128,
 }
 
-#[derive(Debug, PartialEq)]
-struct EvenNumber(i32);
-
-impl TryFrom<i32> for EvenNumber {
-    type Error = ();
-
-    fn try_from(value: i32) -> Result<Self, Self::Error> {
-        if value % 2 == 0 {
-            Ok(EvenNumber(value))
-        } else {
-            Err(())
-        }
-    }
-}
 
 #[starknet::interface]
 trait ITWAMM<TContractState> {
-    //function for minting position
     fn mint_and_increase_sell_amount(
         ref self: TContractState,
         order_key: OrderKey,
         amount: u128
     ) -> (u64, u128);
 }
+
 
 #[starknet::contract]
 mod L2TWAMMBridge {
@@ -48,7 +36,7 @@ mod L2TWAMMBridge {
     #[storage]
     struct Storage {
         sender_to_amount: Map<ContractAddress, u128>,
-        twamm_contract: ContractAddress, // Add this line to store the TWAMM contract address
+        twamm_contract: ContractAddress,
     }
 
     /// external on_receive function
@@ -65,18 +53,21 @@ mod L2TWAMMBridge {
         // Assuming the message contains at least 7 elements
         assert(message.len() >= 7, 'Invalid message length');
 
-        let sender = ContractAddress::try_from(message[0]);
-        let sell_token = ContractAddress::try_from(message[1]);
-        let buy_token = ContractAddress::try_from(message[2]);
-        let fee = ContractAddress::try_from(message[3]);
-        let start = u64::try_from(message[4]);
-        let end = u64::try_from(message[5]);
-        let amount = u128::try_from(message[6]);
+        let sender: ContractAddress = starknet::contract_address_const::<0x123abc>();
+        let sell_token: ContractAddress = starknet::contract_address_const::<0x456def>();
+        let buy_token: ContractAddress = starknet::contract_address_const::<0x456de1>();
+        let tick: u128 = 1200_u128; // Random multiple of 100
+        let amount: u128 = 500000_u128; // Random amount
 
-        let order_key = OrderKey { sell_token, buy_token, start, end };
+        let order_key = OrderKey { 
+            token0: sell_token, 
+            token1: buy_token, 
+            tick: tick 
+        };
         
+        let mut twamm_contract = self.twamm_contract.read();
         let (minted_amount, new_sell_amount) = ITWAMM::mint_and_increase_sell_amount(
-            self.twamm_contract.read(),
+            ref twamm_contract,
             order_key,
             amount
         );
