@@ -4,14 +4,6 @@ use core::result::ResultTrait;
 use std::convert::TryFrom;
 use core::result::Result;
 
-//define the order key struct
-#[derive(Copy, Drop, Serde)]
-struct OrderKey {
-    sell_token: ContractAddress,
-    buy_token: ContractAddress,
-    start: u64,
-    end: u64,
-}
 
 impl TryFrom<(ContractAddress, ContractAddress, felt252, felt252)> for OrderKey {
     type Error = felt252;
@@ -29,15 +21,6 @@ impl TryFrom<(ContractAddress, ContractAddress, felt252, felt252)> for OrderKey 
 }
 
 
-#[starknet::interface]
-trait ITWAMM<TContractState> {
-    //function for minting position
-    fn mint_and_increase_sell_amount(
-        ref self: TContractState,
-        order_key: OrderKey,
-        amount: u128
-    ) -> (u64, u128);
-}
 
 #[starknet::contract]
 mod L2TWAMMBridge {

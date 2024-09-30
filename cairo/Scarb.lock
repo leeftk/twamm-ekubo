@@ -2,5 +2,5 @@
 version = 1
 
 [[package]]
-name = "l2_twamm_bridge"
+name = "your_package_name"
 version = "0.1.0"
