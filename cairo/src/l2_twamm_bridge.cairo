@@ -1,8 +1,17 @@
 use starknet::{ContractAddress, get_contract_address};
+use starknet::storage::{
+    Map, StoragePointerWriteAccess, StorageMapReadAccess, StoragePointerReadAccess, StoragePath,
+    StoragePathEntry, StorageMapWriteAccess
+};
 use crate::types::order_key::OrderKey;
 use crate::extensions::mock_twamm::IMockTWAMM;
 use crate::extensions::mock_twamm::IMockTWAMMDispatcher;
 use crate::extensions::mock_twamm::IMockTWAMMDispatcherTrait;
+
+#[starknet::interface]
+pub trait IL2TWAMMBridge<TContractState> {
+    fn on_receive(ref self: TContractState, l2_token: ContractAddress, amount: u256, depositor: felt252, message: Span<felt252>) -> bool;
+}
 
 #[starknet::contract]
 mod L2TWAMMBridge {
@@ -45,6 +54,7 @@ mod L2TWAMMBridge {
         let (minted_amount, new_sell_amount) = mock_twamm.mint_and_increase_sell_amount(order_key, amount);
 
         self.sender_to_amount.write(sender, new_sell_amount);
-        true
+                true
     }
+
 }
