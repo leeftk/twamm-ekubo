@@ -11,6 +11,7 @@ use crate::extensions::mock_twamm::IMockTWAMMDispatcherTrait;
 #[starknet::interface]
 pub trait IL2TWAMMBridge<TContractState> {
     fn on_receive(ref self: TContractState, l2_token: ContractAddress, amount: u256, depositor: felt252, message: Span<felt252>) -> bool;
+    fn get_contract_version(self: @TContractState) -> felt252;
 }
 
 #[starknet::contract]
@@ -29,7 +30,7 @@ mod L2TWAMMBridge {
 
     #[external(v0)]
     fn on_receive(
-        ref self: ContractState,
+        self: @ContractState,
         l2_token: ContractAddress,
         amount: u256,
         depositor: felt252,
@@ -50,11 +51,15 @@ mod L2TWAMMBridge {
             tick: tick 
         };
 
-        let mock_twamm = IMockTWAMMDispatcher { contract_address: this_contract_address };
-        let (minted_amount, new_sell_amount) = mock_twamm.mint_and_increase_sell_amount(order_key, amount);
+        // let mock_twamm = IMockTWAMMDispatcher { contract_address: this_contract_address };
+        // let (minted_amount, new_sell_amount) = mock_twamm.mint_and_increase_sell_amount(order_key, amount);
 
-        self.sender_to_amount.write(sender, new_sell_amount);
+        // self.sender_to_amount.write(sender, new_sell_amount);
                 true
+    }
+    #[external(v0)]
+    fn get_contract_version(self: @ContractState) -> felt252 {
+        'L2TWAMMBridge v1.0'
     }
 
 }

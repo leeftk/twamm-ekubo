@@ -36,10 +36,16 @@ fn test_on_receive() {
     let message: Array<felt252> = array![1, 2, 3, 4, 5, 6, 7];
 
     // // Call the on_receive function
-    let result = bridge.on_receive(l2_token, amount, depositor, message.span());
+    let result = bridge.get_contract_version();
 
     // // Assert the result
-    //assert(result == true, 'on_receive should return true');
+    assert(result == 'L2TWAMMBridge v1.0', 'Incorrect contract version');
+
+    // Call the on_receive function
+    let result = bridge.on_receive(l2_token, amount, depositor, message.span());
+
+    // Assert the result
+    assert(result == true, 'on_receive should return true');
 
     // You can add more assertions here to check the state changes
     // For example, if you add a getter function to check sender_to_amount, you could use it here
