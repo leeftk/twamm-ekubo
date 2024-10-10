@@ -16,3 +16,4 @@ snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", tag 
 assert_macros = "2.8.2"
 
 [[target.starknet-contract]]
+
