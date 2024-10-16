@@ -118,73 +118,66 @@ fn test_mint_and_increase_sell_amount() {
     let (minted_amount, new_sell_amount) = positions_contract
         .mint_and_increase_sell_amount(order_key, 10000);
 
-    //Assert the results
-    // ... existing code ...
-    // ... existing code ...
     assert_eq!(minted_amount > 0, true, "New sell amount should be greater than original amount");
     assert_eq!(
         new_sell_amount > 10000, true, "New sell amount should be greater than original amount"
     );
-    // ... existing code ...
 
 }
-//     // Approve the positions contract to spend tokens
-//     let transfer_amount = 10000_u256;
-//     // Transfer tokens to the positions contract
-//    let result = IERC20Dispatcher { contract_address: token0.contract_address
-//    }.transfer(positions_contract.contract_address, transfer_amount);
-//     assert(result == true, 'transfer should return true');
-//     let result = IERC20Dispatcher { contract_address: token1.contract_address
-//     }.transfer(positions_contract.contract_address, transfer_amount);
 
-// //     // Call the function using the dispatcher
-//      positions_contract.mint_and_increase_sell_amount(order_key, 10000);
+#[test]
+#[fork("mainnet")]
+fn test_on_receive() {
+    let pool_key = setup();
+    let positions_contract = positions();
+    let pool_key = PoolKey {
+        token0: pool_key.token0,
+        token1: pool_key.token1,
+        fee: 0,
+        tick_spacing: 354892,
+        extension: contract_address_const::<
+            0x043e4f09c32d13d43a880e85f69f7de93ceda62d6cf2581a582c6db635548fdc
+        >(),
+    };
 
-// Assert the results
-// assert(minted_amount > 0, 'Should have minted some amount');
-// assert(new_sell_amount > amount, 'New sell amount should be greater than original amount');
+    ekubo_core().initialize_pool(pool_key, i129 { mag: 0, sign: false });
+    //     // Set up test parameters
+    let current_timestamp = get_block_timestamp();
+    // let duration = 7 * 24 * 60 * 60; // 7 days in seconds
+    let difference = 16 - (current_timestamp % 16);
+    let power_of_16 = 16 * 16; // 16 hours in seconds
+    let start_time = (current_timestamp + difference);
+    let end_time = start_time + 64;
 
-// assert(result == true, 'mint_and_increase_sell_amount should return true');
+    let order_key = OrderKey {
+        sell_token: pool_key.token0,
+        buy_token: pool_key.token1,
+        fee: 0,
+        start_time: start_time,
+        end_time: end_time
+    };
 
-//}
+    let contract_address = deploy_contract();
+    let bridge = IL2TWAMMBridgeDispatcher{contract_address};
+ 
+    let mut output_array = array![];
+    order_key.serialize(ref output_array);
+     // Removed 'ref' keyword
 
-// // #[test]
-// // #[fork("mainnet")]
-// // fn test_on_receive() {
 
-// //     let contract_address = deploy_contract();
-// //     //contract.set_positions_address(contract_address);
-// //     // // Create a dispatcher to interact with the contract
-// //     // let (tokenA, tokenB) = setUpTokens();
-// //     // let (token0, token1) = if tokenA.contract_address < tokenB.contract_address {
-// //     //     (tokenA, tokenB)
-// //     //     } else {
-// //     //         (tokenB, tokenA)
-// //     //     };
-// //     let bridge = IL2TWAMMBridgeDispatcher{contract_address};
-// //     //create a message with encoded parameters for mint_and_increase_sell_amount
-// //     let start_time = 1717286400;
-// //     let end_time = 1717372800;
+    // Call the on_receive function
+    let result = bridge.get_contract_version();
 
-// //     let order_key = OrderKey {
-// //         sell_token: ContractAddress::from(0x1),
-// //         buy_token: ContractAddress::from(0x2),
-// //         fee: 3000,
-// //         start_time: start_time,
-// //         end_time: end_time
-// //     };
+    // // // Assert the result
+    assert(result == 'L2TWAMMBridge v1.0', 'Incorrect contract version');
+      // Define the missing variables
+      let l2_token = pool_key.token0;  // Using token0 as an example
+      let amount = 1000_u256;  // Example amount
+      let depositor = get_contract_address(); 
 
-// //     let mut serialized = order_key.serialize(ref output_array);
+    // Call the on_receive function
+    let result = bridge.on_receive(l2_token, amount, depositor, output_array.span());
 
-// //     // Call the on_receive function
-// //     // let result = bridge.get_contract_version();
-
-// //     // // // Assert the result
-// //     // assert(result == 'L2TWAMMBridge v1.0', 'Incorrect contract version');
-
-// //     // Call the on_receive function
-// //     //let result = bridge.on_receive(l2_token, amount, depositor, message.span());
-
-// // }
+}
 
 
