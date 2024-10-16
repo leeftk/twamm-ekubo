@@ -70,7 +70,12 @@ mod L2TWAMMBridge {
             >();
             let positions = IPositionsDispatcher { contract_address: position_address };
             let (minted, amount) = positions.mint_and_increase_sell_amount(order_key, amount);
-            true
+            //if minted is 0, return false, otherwise return true
+            if minted == 0 {
+                return false;
+            } else {
+                return true;
+            }
         }
 
         fn set_positions_address(ref self: ContractState, address: ContractAddress) {

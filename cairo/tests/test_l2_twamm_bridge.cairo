@@ -185,7 +185,7 @@ fn test_on_receive() {
 
     // Call the on_receive function
     let result = bridge.on_receive(l2_token, amount, depositor, output_array.span());
-
+    assert(result == true, 'transfer should return true');
 }
 
 
