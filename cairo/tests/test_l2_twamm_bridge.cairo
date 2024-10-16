@@ -172,8 +172,16 @@ fn test_on_receive() {
     assert(result == 'L2TWAMMBridge v1.0', 'Incorrect contract version');
       // Define the missing variables
       let l2_token = pool_key.token0;  // Using token0 as an example
-      let amount = 1000_u256;  // Example amount
+      let amount = 1000_u128;  // Example amount
       let depositor = get_contract_address(); 
+      let transfer_amount = 10000_u256;
+      // Transfer tokens to the positions contract
+      let result = IERC20Dispatcher { contract_address: pool_key.token0 }
+          .transfer(positions_contract.contract_address, transfer_amount);
+      assert(result == true, 'transfer should return true');
+      let result = IERC20Dispatcher { contract_address: pool_key.token1 }
+          .transfer(positions_contract.contract_address, transfer_amount);
+  
 
     // Call the on_receive function
     let result = bridge.on_receive(l2_token, amount, depositor, output_array.span());

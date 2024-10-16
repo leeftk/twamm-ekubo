@@ -13,7 +13,7 @@ pub trait IL2TWAMMBridge<TContractState> {
     fn on_receive(
         ref self: TContractState,
         l2_token: ContractAddress,
-        amount: u256,
+        amount: u128,
         depositor: ContractAddress,
         message: Span<felt252>
     ) -> bool;
@@ -38,8 +38,7 @@ pub trait ICore<TContractState> {
 
 #[starknet::contract]
 mod L2TWAMMBridge {
-    use super::IPositions;
-    use super::IPositionsDispatcher;
+    use super::{IPositionsDispatcher, IPositionsDispatcherTrait, IPositions};
     use super::OrderKey;
     use starknet::{ContractAddress, get_contract_address};
     use starknet::storage::Map;
@@ -56,7 +55,7 @@ mod L2TWAMMBridge {
         fn on_receive(
             ref self: ContractState,
             l2_token: ContractAddress,
-            amount: u256,
+            amount: u128,
             depositor: ContractAddress,
             message: Span<felt252>
         ) -> bool {
@@ -70,8 +69,7 @@ mod L2TWAMMBridge {
                 0x02e0af29598b407c8716b17f6d2795eca1b471413fa03fb145a5e33722184067
             >();
             let positions = IPositionsDispatcher { contract_address: position_address };
-            let (minted_amount, new_sell_amount) =
-            positions.mint_and_increase_sell_amount(order_key, amount);
+            let (minted, amount) = positions.mint_and_increase_sell_amount(order_key, amount);
             true
         }
 
