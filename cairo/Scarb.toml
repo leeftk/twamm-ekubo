@@ -1,8 +1,9 @@
 [package]
-name = "ekubo"
+name = "twammbridge"
 version = "0.1.0"
 
 [dependencies]
+ekubo = { git = "https://github.com/ekuboprotocol/abis" }
 starknet = ">=2.3.0"
 
 

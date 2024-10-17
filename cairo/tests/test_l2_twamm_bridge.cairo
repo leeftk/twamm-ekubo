@@ -7,14 +7,15 @@ use snforge_std::{
     declare, DeclareResultTrait, ContractClassTrait, cheat_block_timestamp, CheatSpan, ContractClass
 };
 use core::result::ResultTrait;
-use ekubo::l2_twamm_bridge::L2TWAMMBridge;
-use ekubo::l2_twamm_bridge::{IL2TWAMMBridgeDispatcher, IL2TWAMMBridgeDispatcherTrait};
-use ekubo::types::order_key::OrderKey;
-use ekubo::types::pool_key::PoolKey;
+use twammbridge::l2_twamm_bridge::L2TWAMMBridge;
+use twammbridge::l2_twamm_bridge::{IL2TWAMMBridgeDispatcher, IL2TWAMMBridgeDispatcherTrait};
+use twammbridge::test_token::{IERC20Dispatcher, IERC20DispatcherTrait};
+use ekubo::types::keys::{PoolKey};
+use ekubo::extensions::interfaces::twamm::{OrderKey, OrderInfo};
 use ekubo::types::i129::i129;
-use ekubo::l2_twamm_bridge::{IPositionsDispatcher, IPositionsDispatcherTrait};
-use ekubo::l2_twamm_bridge::{ICoreDispatcher, ICoreDispatcherTrait};
-use ekubo::test_token::{IERC20Dispatcher, IERC20DispatcherTrait};
+use ekubo::interfaces::positions::{IPositionsDispatcher, IPositionsDispatcherTrait};
+use ekubo::interfaces::core::{ICoreDispatcherTrait, ICoreDispatcher, IExtensionDispatcher};
+
 
 fn deploy_contract() -> ContractAddress {
     let contract = declare("L2TWAMMBridge").unwrap().contract_class();

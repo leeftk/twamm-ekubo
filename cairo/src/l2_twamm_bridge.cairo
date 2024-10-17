@@ -3,9 +3,9 @@ use starknet::storage::{
     Map, StoragePointerWriteAccess, StorageMapReadAccess, StoragePointerReadAccess, StoragePath,
     StoragePathEntry, StorageMapWriteAccess
 };
-use super::types::order_key::OrderKey;
-use super::types::pool_key::PoolKey;
-use crate::types::i129::i129;
+use ekubo::extensions::interfaces::twamm::{OrderKey, OrderInfo};
+use ekubo::types::keys::PoolKey;
+use ekubo::types::i129::{i129};
 
 
 #[starknet::interface]
