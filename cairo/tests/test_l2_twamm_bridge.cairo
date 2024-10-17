@@ -165,12 +165,6 @@ fn test_on_receive() {
     order_key.serialize(ref output_array);
      // Removed 'ref' keyword
 
-
-    // Call the on_receive function
-    let result = bridge.get_contract_version();
-
-    // // // Assert the result
-    assert(result == 'L2TWAMMBridge v1.0', 'Incorrect contract version');
       // Define the missing variables
       let l2_token = pool_key.token0;  // Using token0 as an example
       let amount = 1000_u128;  // Example amount

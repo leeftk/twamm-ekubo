@@ -6,6 +6,8 @@ use starknet::storage::{
 use ekubo::extensions::interfaces::twamm::{OrderKey, OrderInfo};
 use ekubo::types::keys::PoolKey;
 use ekubo::types::i129::{i129};
+use ekubo::interfaces::positions::{IPositionsDispatcher, IPositionsDispatcherTrait};
+use ekubo::interfaces::core::{ICoreDispatcherTrait, ICoreDispatcher, IExtensionDispatcher};
 
 
 #[starknet::interface]
@@ -17,29 +19,14 @@ pub trait IL2TWAMMBridge<TContractState> {
         depositor: ContractAddress,
         message: Span<felt252>
     ) -> bool;
-    fn get_contract_version(self: @TContractState) -> felt252;
     fn set_positions_address(ref self: TContractState, address: ContractAddress);
-}
-
-#[starknet::interface]
-pub trait IPositions<TContractState> {
-    fn mint_and_increase_sell_amount(
-        ref self: TContractState, order_key: OrderKey, amount: u128
-    ) -> (u64, u128);
-}
-
-#[starknet::interface]
-pub trait ICore<TContractState> {
-    // Initialize a pool. This can happen outside of a lock callback because it does not require any
-    // tokens to be spent.
-    fn initialize_pool(ref self: TContractState, pool_key: PoolKey, initial_tick: i129) -> u256;
 }
 
 
 #[starknet::contract]
 mod L2TWAMMBridge {
-    use super::{IPositionsDispatcher, IPositionsDispatcherTrait, IPositions};
-    use super::OrderKey;
+    use ekubo::interfaces::positions::{IPositionsDispatcher, IPositionsDispatcherTrait};
+    use ekubo::extensions::interfaces::twamm::{OrderKey};
     use starknet::{ContractAddress, get_contract_address};
     use starknet::storage::Map;
 
@@ -51,6 +38,7 @@ mod L2TWAMMBridge {
 
 
     #[external(v0)]
+    #[abi(embed_v0)]
     impl L2TWAMMBridge of super::IL2TWAMMBridge<ContractState> {
         fn on_receive(
             ref self: ContractState,
@@ -71,7 +59,7 @@ mod L2TWAMMBridge {
             let positions = IPositionsDispatcher { contract_address: position_address };
             let (minted, amount) = positions.mint_and_increase_sell_amount(order_key, amount);
             //if minted is 0, return false, otherwise return true
-            if minted == 0 {
+            if minted == 0 && amount == 0 {
                 return false;
             } else {
                 return true;
@@ -81,14 +69,5 @@ mod L2TWAMMBridge {
         fn set_positions_address(ref self: ContractState, address: ContractAddress) {
             self.positions_address.write(address);
         }
-
-        fn get_contract_version(self: @ContractState) -> felt252 {
-            'L2TWAMMBridge v1.0'
-        }
     }
 }
-
-
-
-//notes on whats left
-//First let's import all of the interfaces from the Ekubo repo
