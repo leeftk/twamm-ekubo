@@ -43,6 +43,8 @@ mod L2TWAMMBridge {
     struct Message {
         operation_type: u8,
         order_key: OrderKey,
+        id: u64,
+        sale_rate_delta: u128,
     }
     #[external(v0)]
     #[abi(embed_v0)]
