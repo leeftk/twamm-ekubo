@@ -73,6 +73,11 @@ fn setup() -> PoolKey {
     (pool_key)
 }
 
+#[derive(Drop, Serde)]
+struct Message {
+    operation_type: u8,
+    order_key: OrderKey,
+}
 
 #[test]
 #[fork("mainnet")]
@@ -123,7 +128,6 @@ fn test_mint_and_increase_sell_amount() {
     assert_eq!(
         new_sell_amount > 10000, true, "New sell amount should be greater than original amount"
     );
-
 }
 
 #[test]
@@ -142,7 +146,8 @@ fn test_on_receive() {
     };
 
     ekubo_core().initialize_pool(pool_key, i129 { mag: 0, sign: false });
-    //     // Set up test parameters
+    // Set up test parameters
+
     let current_timestamp = get_block_timestamp();
     // let duration = 7 * 24 * 60 * 60; // 7 days in seconds
     let difference = 16 - (current_timestamp % 16);
@@ -158,29 +163,45 @@ fn test_on_receive() {
         end_time: end_time
     };
 
+    
     let contract_address = deploy_contract();
-    let bridge = IL2TWAMMBridgeDispatcher{contract_address};
- 
-    let mut output_array = array![];
-    order_key.serialize(ref output_array);
-     // Removed 'ref' keyword
+    let bridge = IL2TWAMMBridgeDispatcher { contract_address };
+    bridge.set_positions_address(positions_contract.contract_address);
 
-      // Define the missing variables
-      let l2_token = pool_key.token0;  // Using token0 as an example
-      let amount = 1000_u128;  // Example amount
-      let depositor = get_contract_address(); 
-      let transfer_amount = 10000_u256;
-      // Transfer tokens to the positions contract
-      let result = IERC20Dispatcher { contract_address: pool_key.token0 }
-          .transfer(positions_contract.contract_address, transfer_amount);
-      assert(result == true, 'transfer should return true');
-      let result = IERC20Dispatcher { contract_address: pool_key.token1 }
-          .transfer(positions_contract.contract_address, transfer_amount);
-  
+    let order_key = OrderKey {
+        sell_token: pool_key.token0,
+        buy_token: pool_key.token1,
+        fee: 0,
+        start_time: start_time,
+        end_time: end_time
+    };
+    
+    let message = Message {
+        operation_type: 0, 
+        // Assuming 0 is for minting
+        order_key,
+    };
+    let mut output_array = array![];
+    message.serialize(ref output_array);
+    
+    let mut span_array = output_array.span();
+    assert(span_array.len() > 0, 'span_array should not be empty');
+    // Define the missing variables
+    let l2_token = pool_key.token0; // Using token0 as an example
+    let amount = 1000_u128; // Example amount
+    let depositor = get_contract_address();
+
+    // Transfer tokens to the positions contract
+    let result = IERC20Dispatcher { contract_address: pool_key.token0 }
+        .transfer(positions_contract.contract_address, 10000);
+    assert(result == true, 'transfer should return true');
+    let result = IERC20Dispatcher { contract_address: pool_key.token1 }
+        .transfer(positions_contract.contract_address, 10000);
 
     // Call the on_receive function
-    let result = bridge.on_receive(l2_token, amount, depositor, output_array.span());
-    assert(result == true, 'transfer should return true');
+    let result = bridge.on_receive(l2_token, amount, depositor, span_array);
+    assert(result == true, 'on_receive should return true');
+
+    // Optional: Deserialize to verify (if needed)
+    // let deserialized_message: Message = Serde::<Message>::deserialize(ref span_array).unwrap();
 }
-
-
