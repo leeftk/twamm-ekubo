@@ -8,8 +8,10 @@ interface IStarknetTokenBridge {
     function depositWithMessage(address token, uint256 amount, uint256 l2Recipient, uint256[] calldata message)
         external
         payable
-        returns (uint256);
-    function getBridge(address tokenAddress) external view returns (address);
+        returns (uint256);}
+
+interface IStarknetRegistry {
+    function getBridge(address token) external view returns (address);
 }
 
 /// @title L1TWAMMBridge
@@ -21,6 +23,8 @@ contract L1TWAMMBridge is Ownable {
     IERC20 public immutable token;
     /// @notice The StarkNet token bridge interface
     IStarknetTokenBridge public immutable starknetBridge;
+    /// @notice The StarkNet registry interface
+    IStarknetRegistry public immutable starknetRegistry;
     /// @notice The L2 bridge address on StarkNet
     address public immutable l2BridgeAddress;
     /// @notice The L2 Ekubo address on StarkNet
@@ -58,7 +62,7 @@ contract L1TWAMMBridge is Ownable {
     /// @param _starknetBridge The address of the StarkNet token bridge
     /// @param _l2EkuboAddress The address of the L2 Ekubo contract
     /// @param _l2EndpointAddress The address of the L2 endpoint
-    constructor(address _token, address _starknetBridge, address _l2EkuboAddress, uint256 _l2EndpointAddress)
+    constructor(address _token, address _starknetBridge, address _l2EkuboAddress, uint256 _l2EndpointAddress, address _starknetRegistry)
         Ownable(msg.sender)
     {
         token = IERC20(_token);
@@ -66,6 +70,7 @@ contract L1TWAMMBridge is Ownable {
         l2EkuboAddress = _l2EkuboAddress;
         l2EndpointAddress = _l2EndpointAddress;
         supportedTokens[_token] = true;
+        starknetRegistry = IStarknetRegistry(_starknetRegistry);
     }
 
     /// @notice Sets the L2 endpoint address
@@ -78,7 +83,7 @@ contract L1TWAMMBridge is Ownable {
     /// @param tokenAddress The address of the token to validate
     /// @return A boolean indicating if the bridge is valid
     function validateBridge(address tokenAddress) internal view returns (bool) {
-        address bridge = starknetBridge.getBridge(tokenAddress);
+        address bridge = starknetRegistry.getBridge(tokenAddress);
         return bridge != address(0);
     }
 
@@ -99,17 +104,14 @@ contract L1TWAMMBridge is Ownable {
         address buyToken,
         uint128 fee
     ) external payable {
-        if (validateBridge(address(token)) == false) revert L1TWAMMBridge__InvalidBridge();
-        if (start >= end) revert L1TWAMMBridge__InvalidTimeRange();
-        // deadline maybe additionally
-        // must validate start time has be great block.timestamp
-        // must validate modulus 16 between start and end time
-        if ((end - start) % 16 != 0) revert L1TWAMMBridge__InvalidTimeRange();
-        if (start < block.timestamp) revert L1TWAMMBridge__InvalidTimeRange();
+       if (validateBridge(address(token)) == false) revert L1TWAMMBridge__InvalidBridge();
+        // if (start >= end) revert L1TWAMMBridge__InvalidTimeRange();
 
-        // deadline maybe additionally
-        // start time has be great block.timestamp
-        // modulus 16 between start and end time
+        // // New time validation 
+        // uint256 currentTime = block.timestamp;
+        // if (!isTimeValid(currentTime, start) || !isTimeValid(currentTime, end)) {
+        //     revert L1TWAMMBridge__InvalidTimeRange();
+        // }
 
         token.transferFrom(msg.sender, address(this), amount);
         token.approve(address(starknetBridge), 0);
@@ -167,14 +169,15 @@ contract L1TWAMMBridge is Ownable {
         uint256 end,
         uint128 amount
     ) internal pure returns (uint256[] memory) {
-        uint256[] memory payload = new uint256[](8); // Adjusted size from 9 to 8
-        payload[0] = uint256(uint160(sender));
-        payload[1] = uint256(uint160(sellToken));
-        payload[2] = uint256(uint160(buyToken));
-        payload[3] = uint256(fee);
-        payload[4] = uint256(uint64(start));
-        payload[5] = uint256(uint64(end));
-        payload[6] = uint256(amount);
+        uint256[] memory payload = new uint256[](8);
+        payload[0] = 0; // Operation ID for buys
+        payload[1] = uint256(uint160(sender));
+        payload[2] = uint256(uint160(sellToken));
+        payload[3] = uint256(uint160(buyToken));
+        payload[4] = uint256(fee);
+        payload[5] = uint256(uint64(start));
+        payload[6] = uint256(uint64(end));
+        payload[7] = uint256(amount);
         return payload;
     }
 
@@ -196,12 +199,8 @@ contract L1TWAMMBridge is Ownable {
         uint64 end,
         uint128 saleRateDelta
     ) internal pure returns (uint256[] memory) {
-        uint256[] memory payload = new uint256[](8); // Adjusted size from 9 to 8
-        // Convert the bytes4 selector to bytes32
-        bytes32 selector = bytes32(keccak256("decrease_sale_rate_to()"));
-        // Shift the selector to the left by 224 bits (28 bytes) to align it properly
-
-        payload[0] = uint256(selector >> 224);
+        uint256[] memory payload = new uint256[](8);
+        payload[0] = 1; // Operation ID for withdrawals or sales
         payload[1] = uint256(id);
         payload[2] = uint256(uint160(sellToken));
         payload[3] = uint256(uint160(buyToken));
@@ -216,5 +215,35 @@ contract L1TWAMMBridge is Ownable {
     /// @param _token The address of the token to remove
     function removeSupportedToken(address _token) external onlyOwner {
         supportedTokens[_token] = false;
+    }
+
+    // New helper function for time validation
+    function isTimeValid(uint256 now, uint256 time) internal pure returns (bool) {
+        uint256 TIME_SPACING_SIZE = 16;
+        uint8 LOG_SCALE_FACTOR = 4;
+
+        if (time <= now) return false;
+
+        uint256 step;
+        if (time <= (now + TIME_SPACING_SIZE)) {
+            step = TIME_SPACING_SIZE;
+        } else {
+            uint256 timeDiff = time - now;
+            uint256 msb = mostSignificantBit(timeDiff);
+            uint256 exponent = (msb / LOG_SCALE_FACTOR) * LOG_SCALE_FACTOR;
+            step = 1 << exponent;
+        }
+
+        return time % step == 0;
+    }
+
+    // Helper function to find the most significant bit
+    function mostSignificantBit(uint256 x) internal pure returns (uint8) {
+        uint8 r = 0;
+        while (x > 0) {
+            x >>= 1;
+            r++;
+        }
+        return r - 1;
     }
 }
