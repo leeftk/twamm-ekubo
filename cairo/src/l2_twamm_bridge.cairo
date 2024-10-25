@@ -26,7 +26,7 @@ pub trait IL2TWAMMBridge<TContractState> {
         ref self: TContractState,
         l2_token: ContractAddress,
         amount: u128,
-        depositor: ContractAddress,
+        depositor: EthAddress,
         message: Span<felt252>
     ) -> bool;
     fn set_positions_address(ref self: TContractState, address: ContractAddress);
@@ -45,7 +45,7 @@ mod L2TWAMMBridge {
     use super::EthAddress;
     #[storage]
     struct Storage {
-        sender_to_amount: Map::<ContractAddress, u128>,
+        sender_to_amount: Map::<EthAddress, u128>,
         positions_address: ContractAddress,
         token_bridge_address: ContractAddress,
 
@@ -65,7 +65,7 @@ fn on_receive(
     ref self: ContractState,
     l2_token: ContractAddress,
     amount: u128,
-    depositor: ContractAddress,
+    depositor: EthAddress,
     message: Span<felt252>
 ) -> bool {     
     let mut message_span = message;
@@ -80,6 +80,7 @@ fn on_receive(
                 let (minted, amount) = positions.mint_and_increase_sell_amount(order_key, amount);
                 assert(minted != 0, 'No tokens minted');
                 assert(amount != 0, 'No tokens sold');
+                
                 self.sender_to_amount.write(depositor, amount);
                 true
             } else {
@@ -87,20 +88,20 @@ fn on_receive(
                        // Handle deserialization failure
                        let order_key = deserialized_message.order_key;
                        let id = deserialized_message.id;
-                    //    let l1_recipient = EthAddress(depositor);
-                    //    let sale_rate_delta = deserialized_message.sale_rate_delta;
-                    //    let positions = IPositionsDispatcher { contract_address: self.positions_address.read() };
-                    //    let amount_sold = positions.withdraw_proceeds_from_sale_to_self(id, order_key);
-                    //    //decrease amount in mapping
-                    //    self.sender_to_amount.write(depositor, amount - amount_sold);
-                    //    //send tokens cross chain in bridge
-                    //    let token_bridge = ITokenBridgeDispatcher { 
-                    //     contract_address: starknet::contract_address_const::<0x07754236934aeaf4c29d287b94b5fde8687ba7d59466ea6b80f3f57d6467b7d6>() 
-                    // };      
+                       let l1_recipient = depositor;
+                       let sale_rate_delta = deserialized_message.sale_rate_delta;
+                       let positions = IPositionsDispatcher { contract_address: self.positions_address.read() };
+                       let amount_sold = positions.withdraw_proceeds_from_sale_to_self(id, order_key);
+                       //decrease amount in mapping
+                       //self.sender_to_amount.write(depositor, amount - amount_sold);
+                       //send tokens cross chain in bridge
+                       let token_bridge = ITokenBridgeDispatcher { 
+                           contract_address: self.token_bridge_address.read()
+                       };      
 
-                    // let l1_token = EthAddress { address: 0x6B175474E89094C44Da98b954EedeAC495271d0F };    
-                    // let u256_amount_sold = u256 { low: amount_sold, high: 0 };          
-                    // token_bridge.initiate_token_withdraw(l1_token, l1_recipient, u256_amount_sold);
+                    let l1_token = EthAddress { address: 0x6B175474E89094C44Da98b954EedeAC495271d0F };    
+                    let u256_amount_sold = u256 { low: amount_sold, high: 0 };          
+                    token_bridge.initiate_token_withdraw(l1_token, l1_recipient, u256_amount_sold);
                        false
             }
         },
