@@ -125,30 +125,20 @@ contract L1TWAMMBridge is Ownable {
     }
 
     /// @notice Initiates a withdrawal of tokens from L2 to L1
-    /// @param id The ID of the TWAMM order
     /// @param sellToken The address of the sell token in the order
-    /// @param buyToken The address of the buy token in the order
-    /// @param fee The fee associated with the order
-    /// @param start The start time of the order
-    /// @param end The end time of the order
-    /// @param saleRateDelta The amount to decrease the sale rate by
     /// @param l1Recipient The address of the recipient on L1
+    /// @param amount The amount of tokens to withdraw
     function initiateWithdrawal(
-        uint64 id,
         address sellToken,
-        address buyToken,
-        uint128 fee,
-        uint64 start,
-        uint64 end,
-        uint128 saleRateDelta,
-        address l1Recipient
+        address l1Recipient,
+        uint128 amount
     ) external payable onlyOwner {
         if (validateBridge(address(token)) == false) revert L1TWAMMBridge__InvalidBridge();
 
-        uint256[] memory payload = _encodeWithdrawalPayload(id, sellToken, buyToken, fee, start, end, saleRateDelta);
+        uint256[] memory payload = _encodeWithdrawalPayload(sellToken, l1Recipient, amount);
         starknetBridge.depositWithMessage{value: msg.value}(address(token), 0, l2EndpointAddress, payload);
 
-        emit WithdrawalInitiated(l1Recipient, saleRateDelta);
+        emit WithdrawalInitiated(l1Recipient, amount);
     }
 
     /// @notice Encodes the payload for a deposit transaction
@@ -182,32 +172,21 @@ contract L1TWAMMBridge is Ownable {
     }
 
     /// @notice Encodes the payload for a withdrawal transaction
-    /// @param id The ID of the TWAMM order
     /// @param sellToken The address of the sell token in the order
-    /// @param buyToken The address of the buy token in the order
-    /// @param fee The fee associated with the order
-    /// @param start The start time of the order
-    /// @param end The end time of the order
-    /// @param saleRateDelta The amount to decrease the sale rate by
+    /// @param l1Recipient The address of the recipient on L1
+    /// @param amount The amount of tokens to withdraw
     /// @return A uint256 array containing the encoded payload
     function _encodeWithdrawalPayload(
-        uint64 id,
-        address sellToken,
-        address buyToken,
-        uint128 fee,
-        uint64 start,
-        uint64 end,
-        uint128 saleRateDelta
+      address sellToken,
+      address l1Recipient,
+      uint128 amount
     ) internal pure returns (uint256[] memory) {
         uint256[] memory payload = new uint256[](8);
         payload[0] = 1; // Operation ID for withdrawals or sales
-        payload[1] = uint256(id);
-        payload[2] = uint256(uint160(sellToken));
-        payload[3] = uint256(uint160(buyToken));
-        payload[4] = uint256(fee);
-        payload[5] = uint256(start);
-        payload[6] = uint256(end);
-        payload[7] = uint256(saleRateDelta);
+        payload[1] = uint256(uint160(sellToken));
+        payload[2] = uint256(uint160(l1Recipient));
+        payload[3] = uint256(amount);
+
         return payload;
     }
 
@@ -233,6 +212,10 @@ contract L1TWAMMBridge is Ownable {
         }
 
         return time % step == 0;
+    }
+
+    function isTimeValidExternal(uint256 now, uint256 time) external pure returns (bool) {
+        return isTimeValid(now, time);
     }
 
     // Helper function to find the most significant bit

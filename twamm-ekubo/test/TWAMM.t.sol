@@ -21,11 +21,17 @@ contract L1TWAMMBridgeTest is Test {
 
     //end - start should % 16 = 0
 
-    // Ensure (end - start) is always divisible by 16
+    // Ensure timestamps are aligned with the required step sizes
     uint256 public currentTimestamp = block.timestamp;
     uint256 public difference = 16 - (currentTimestamp % 16);
     uint256 public start = currentTimestamp + difference;
-    uint256 public end = start + 64; // 1600 is divisible by 16
+    // Let's test with MASSIVE intervals
+    uint256 public end = start + 16777216;      // 16 * 1048576 = 16777216      (~4.5 hours)
+    // Other valid larger intervals:
+    // end = start + 268435456;     // 16 * 16777216 = 268435456    (~3 days)
+    // end = start + 4294967296;    // 16 * 268435456 = 4294967296  (~49 days)
+    // end = start + 68719476736;   // 16 * 4294967296 = 68719476736 (~2.2 years)
+    // end = start + 1099511627776; // 16 * 68719476736 = 1099511627776 (~35 years)
 
     uint128 public fee = 0.01 ether;
 
@@ -81,10 +87,10 @@ contract L1TWAMMBridgeTest is Test {
         uint256 expectedNonce = starknetBridge.mockNonce();
 
         vm.expectEmit(true, true, false, true);
-        emit DepositAndCreateOrder(user, l2EndpointAddress, amount, expectedNonce);
+        emit DepositAndCreateOrder(address(user), l2EndpointAddress, amount, expectedNonce);
 
         bridge.depositAndCreateOrder{value: 0.01 ether}(
-            amount, l2EndpointAddress, start, end, address(token), address(token), fee
+            amount, l2EndpointAddress, start, start + 64, address(token), address(token), fee
         );
         vm.stopPrank();
 
@@ -106,33 +112,34 @@ contract L1TWAMMBridgeTest is Test {
         address l1Recipient = address(0x3);
         uint64 id = 1;
         uint128 saleRateDelta = 50 ether;
-        // First, deposit some tokens to the bridge
+        vm.warp(start);
+
+        uint256 testEnd = start + 16777216;
+
         vm.startPrank(user);
         token.approve(address(bridge), amount);
         bridge.depositAndCreateOrder{value: 0.01 ether}(
-            amount, l2EndpointAddress, start, end, address(token), address(token), fee
+            amount, l2EndpointAddress, start, start + 64, address(token), address(token), fee
         );
         vm.stopPrank();
 
-        // Now initiate withdrawal
         vm.expectEmit(true, false, false, true);
-        emit WithdrawalInitiated(l1Recipient, saleRateDelta);
+        emit WithdrawalInitiated(l1Recipient, amount);
 
         vm.prank(bridge.owner());
         bridge.initiateWithdrawal{value: 0.01 ether}(
-            id, address(token), address(token), fee, uint64(start), uint64(end), saleRateDelta, l1Recipient
+            address(token), l1Recipient, amount
         );
     }
 
     function testInitiateWithdrawalUnauthorized() public {
-        uint64 id = 1;
-        uint128 saleRateDelta = 50 ether;
+        uint128 amount = 100 ether;
         address l1Recipient = address(0x3);
 
         vm.expectRevert();
         vm.prank(user);
         bridge.initiateWithdrawal(
-            id, address(token), address(token), fee, uint64(start), uint64(end), saleRateDelta, l1Recipient
+            address(token), l1Recipient, amount
         );
     }
 
@@ -172,7 +179,7 @@ contract L1TWAMMBridgeTest is Test {
         uint128 amount = 100 ether;
 
         vm.mockCall(
-            address(0x1268cc171c54F2000402DfF20E93E60DF4c96812), // starknetTokenBridge address
+            address(0x1268cc171c54F2000402DfF20E93E60DF4c96812),
             abi.encodeWithSelector(IStarknetRegistry.getBridge.selector, address(token)),
             abi.encode(address(starknetBridge))
         );
@@ -183,10 +190,15 @@ contract L1TWAMMBridgeTest is Test {
         uint256 expectedNonce = starknetBridge.mockNonce();
 
         vm.expectEmit(true, true, false, true);
-        emit DepositAndCreateOrder(user, l2EndpointAddress, amount, expectedNonce);
+        emit DepositAndCreateOrder(
+            user,               // l1Sender
+            l2EndpointAddress, // l2Recipient
+            amount,            // amount
+            expectedNonce      // nonce
+        );
 
         bridge.depositAndCreateOrder{value: 0.01 ether}(
-            amount, l2EndpointAddress, start, end, address(token), address(token), fee
+            amount, l2EndpointAddress, start, start + 64, address(token), address(token), fee
         );
         vm.stopPrank();
 
@@ -230,4 +242,27 @@ contract L1TWAMMBridgeTest is Test {
     //     bool isValid = bridge.isTimeValid(alignedStart, alignedStart);
     //     assertTrue(isValid, "Start time should be valid");
     // }
+
+    function testTimeValidation() public {
+        // Let's test various intervals and print results
+        uint256[] memory intervals = new uint256[](6);
+        intervals[0] = 16;          // Basic interval
+        intervals[1] = 256;         // 16 * 16
+        intervals[2] = 4096;        // 16 * 256
+        intervals[3] = 65536;       // 16 * 4096
+        intervals[4] = 1048576;     // 16 * 65536
+        intervals[5] = 16777216;    // 16 * 1048576
+
+        vm.warp(start);
+        
+        for (uint i = 0; i < intervals.length; i++) {
+            bool isValid = bridge.isTimeValidExternal(start, start + intervals[i]);
+            console.log(
+                "Testing interval:", 
+                intervals[i], 
+                "Valid:", 
+                isValid
+            );
+        }
+    }
 }
