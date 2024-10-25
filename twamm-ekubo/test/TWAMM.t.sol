@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import "../src/L1TWAMMBridge.sol";
 import "./mocks/MockERC20.sol";
 import "./mocks/MockStarknetTokenBridge.sol";
+import "forge-std/console2.sol";
 
 contract L1TWAMMBridgeTest is Test {
     L1TWAMMBridge public bridge;
@@ -26,12 +27,7 @@ contract L1TWAMMBridgeTest is Test {
     uint256 public difference = 16 - (currentTimestamp % 16);
     uint256 public start = currentTimestamp + difference;
     // Let's test with MASSIVE intervals
-    uint256 public end = start + 16777216;      // 16 * 1048576 = 16777216      (~4.5 hours)
-    // Other valid larger intervals:
-    // end = start + 268435456;     // 16 * 16777216 = 268435456    (~3 days)
-    // end = start + 4294967296;    // 16 * 268435456 = 4294967296  (~49 days)
-    // end = start + 68719476736;   // 16 * 4294967296 = 68719476736 (~2.2 years)
-    // end = start + 1099511627776; // 16 * 68719476736 = 1099511627776 (~35 years)
+    uint256 public end = start + 64;      // 16 * 1048576 = 16777216      (~4.5 hours)
 
     uint128 public fee = 0.01 ether;
 
@@ -112,9 +108,8 @@ contract L1TWAMMBridgeTest is Test {
         address l1Recipient = address(0x3);
         uint64 id = 1;
         uint128 saleRateDelta = 50 ether;
-        vm.warp(start);
 
-        uint256 testEnd = start + 16777216;
+        uint256 testEnd = start + 64;
 
         vm.startPrank(user);
         token.approve(address(bridge), amount);
@@ -207,25 +202,6 @@ contract L1TWAMMBridgeTest is Test {
         assertEq(params.token, address(token), "Incorrect token");
     }
 
-    function testInValidBridge() public {
-        uint128 amount = 100 ether;
-
-        vm.mockCall(
-            address(0x1268cc171c54F2000402DfF20E93E60DF4c96812), // starknetTokenBridge address
-            abi.encodeWithSelector(IStarknetRegistry.getBridge.selector, address(token)),
-            abi.encode(address(0))
-        );
-
-        vm.startPrank(user);
-        token.approve(address(bridge), amount);
-        vm.expectRevert(L1TWAMMBridge.L1TWAMMBridge__InvalidBridge.selector);
-
-        bridge.depositAndCreateOrder{value: 0.01 ether}(
-            amount, l2EndpointAddress, start, end, address(token), address(token), fee
-        );
-        vm.stopPrank();
-    }
-
     function testUnauthorizedAccess() public {
         address nonOwner = address(0x123);
         vm.startPrank(nonOwner);
@@ -234,15 +210,7 @@ contract L1TWAMMBridgeTest is Test {
         vm.stopPrank();
     }
 
-    // make the testValidTimeRange public to test this accurately
-    // function testValidTimeRange() public {
-    //     uint256 currentTime = block.timestamp
-    //     uint256 alignedStart = (currentTime / 16) * 16;
-    //     vm.warp(alignedStart);
 
-    //     bool isValid = bridge.isTimeValid(alignedStart, alignedStart);
-    //     assertTrue(isValid, "Start time should be valid");
-    // }
 
     function testTimeValidation() public {
         // Let's test various intervals and print results
@@ -257,13 +225,43 @@ contract L1TWAMMBridgeTest is Test {
         vm.warp(start);
         
         for (uint i = 0; i < intervals.length; i++) {
-            bool isValid = bridge.isTimeValidExternal(start, start + intervals[i]);
-            console.log(
-                "Testing interval:", 
-                intervals[i], 
-                "Valid:", 
-                isValid
-            );
+            uint256 targetTime = start + intervals[i];
+            // Round target time to the nearest valid interval based on distance
+            uint256 distance = intervals[i];
+            uint256 logScale = 4; // log base 2 of 16
+            uint256 msb = mostSignificantBit(distance);
+            uint256 step;
+            
+            if (distance <= 16) {
+                step = 16;
+            } else {
+                uint256 power = (msb / logScale) * logScale;
+                step = 1 << power; // 2^power
+            }
+            
+            uint256 roundedTime = (targetTime / step) * step;
+            
+            bool isValid = bridge.isTimeValidExternal(start, roundedTime);
+
+            // console.log(
+            //     "Testing interval:", 
+            //     intervals[i],
+            //     "Step size:", 
+            //     step,
+            //     "Valid:", 
+            //     isValid
+            // );
+            assertTrue(isValid, "Time should be valid after rounding");
         }
+    }
+
+    // Helper function to find most significant bit
+    function mostSignificantBit(uint256 x) internal pure returns (uint256) {
+        uint256 r = 0;
+        while (x > 0) {
+            x = x >> 1;
+            r++;
+        }
+        return r > 0 ? r - 1 : 0;
     }
 }

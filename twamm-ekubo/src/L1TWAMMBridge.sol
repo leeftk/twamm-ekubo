@@ -196,40 +196,47 @@ contract L1TWAMMBridge is Ownable {
         supportedTokens[_token] = false;
     }
 
-    // New helper function for time validation
-    function isTimeValid(uint256 now, uint256 time) internal pure returns (bool) {
-        uint256 TIME_SPACING_SIZE = 16;
-        uint8 LOG_SCALE_FACTOR = 4;
+    uint256 constant TIME_SPACING_SIZE = 16;
+    uint256 constant LOG_SCALE_FACTOR = 4;  // log base 2 of TIME_SPACING_SIZE
 
+    function isTimeValid(uint256 now_, uint256 time) internal pure returns (bool) {
+        // Calculate step size = 16**(max(1, floor(log_16(time-now))))
         uint256 step;
-        if (time <= (now + TIME_SPACING_SIZE)) {
+        if (time <= (now_ + TIME_SPACING_SIZE)) {
             step = TIME_SPACING_SIZE;
         } else {
-            uint256 timeDiff = time - now;
-            uint256 msb = mostSignificantBit(timeDiff);
-            uint256 exponent = LOG_SCALE_FACTOR * (msb / LOG_SCALE_FACTOR);
-            step = 1 << exponent;
+            uint256 timeDiff = time - now_;
+            // In Cairo, msb returns the highest set bit position
+            uint256 msbResult = mostSignificantBit(timeDiff);
+            // Calculate power: LOG_SCALE_FACTOR * (msb(time-now) / LOG_SCALE_FACTOR)
+            uint256 power = LOG_SCALE_FACTOR * (msbResult / LOG_SCALE_FACTOR);
+            // 2^power
+            step = 1 << power;
         }
 
+        // Check if time is divisible by step
         return time % step == 0;
     }
 
-    function isTimeValidExternal(uint256 now, uint256 time) external pure returns (bool) {
-        return isTimeValid(now, time);
+    function isTimeValidExternal(uint256 start, uint256 end) external view returns (bool) {
+        return isTimeValid(start, end);
     }
 
-    // Helper function to find the most significant bit
-    function mostSignificantBit(uint256 x) internal pure returns (uint8) {
-        uint8 r = 0;
-        while (x > 0) {
+    function mostSignificantBit(uint256 x) internal pure returns (uint256) {
+        if (x == 0) return 0;
+        
+        uint256 result = 0;
+        while (x != 0) {
             x >>= 1;
-            r++;
+            result += 1;
         }
-        return r - 1;
+        return result - 1;
     }
 }
 
 
 /// create and order
+
+
 
 
