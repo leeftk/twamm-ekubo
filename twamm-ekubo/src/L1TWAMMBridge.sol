@@ -105,13 +105,13 @@ contract L1TWAMMBridge is Ownable {
         uint128 fee
     ) external payable {
        if (validateBridge(address(token)) == false) revert L1TWAMMBridge__InvalidBridge();
-        // if (start >= end) revert L1TWAMMBridge__InvalidTimeRange();
+        if (start >= end) revert L1TWAMMBridge__InvalidTimeRange();
 
-        // // New time validation 
-        // uint256 currentTime = block.timestamp;
-        // if (!isTimeValid(currentTime, start) || !isTimeValid(currentTime, end)) {
-        //     revert L1TWAMMBridge__InvalidTimeRange();
-        // }
+        // New time validation 
+        uint256 currentTime = block.timestamp;
+        if (!isTimeValid(currentTime, start) || !isTimeValid(currentTime, end)) {
+            revert L1TWAMMBridge__InvalidTimeRange();
+        }
 
         token.transferFrom(msg.sender, address(this), amount);
         token.approve(address(starknetBridge), 0);
@@ -222,15 +222,13 @@ contract L1TWAMMBridge is Ownable {
         uint256 TIME_SPACING_SIZE = 16;
         uint8 LOG_SCALE_FACTOR = 4;
 
-        if (time <= now) return false;
-
         uint256 step;
         if (time <= (now + TIME_SPACING_SIZE)) {
             step = TIME_SPACING_SIZE;
         } else {
             uint256 timeDiff = time - now;
             uint256 msb = mostSignificantBit(timeDiff);
-            uint256 exponent = (msb / LOG_SCALE_FACTOR) * LOG_SCALE_FACTOR;
+            uint256 exponent = LOG_SCALE_FACTOR * (msb / LOG_SCALE_FACTOR);
             step = 1 << exponent;
         }
 
@@ -247,3 +245,8 @@ contract L1TWAMMBridge is Ownable {
         return r - 1;
     }
 }
+
+
+/// create and order
+
+
