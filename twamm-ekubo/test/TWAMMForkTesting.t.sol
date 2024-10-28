@@ -44,11 +44,11 @@ contract L1TWAMMBridgeTest is Test {
         vm.createSelectFork("https://ethereum-rpc.publicnode.com");
         
         // DAI token address on Ethereum mainnet
-        address daiAddress = 0x610dBd98A28EbbA525e9926b6aaF88f9159edbfd;
+        address daiAddress = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
         token = MockERC20(daiAddress);
 
         
-        bridge = new L1TWAMMBridge(address(daiAddress), address(0xF5b6Ee2CAEb6769659f6C091D209DfdCaF3F69Eb), l2EkuboAddress, l2EndpointAddress, address(0x1268cc171c54F2000402DfF20E93E60DF4c96812));
+        bridge = new L1TWAMMBridge(address(daiAddress), address(0xCA14057f85F2662257fd2637FdEc558626bCe554), l2EkuboAddress, l2EndpointAddress, address(0x1268cc171c54F2000402DfF20E93E60DF4c96812));
         console.log("bridge address", address(bridge));
         
         // Mint DAI to the user
