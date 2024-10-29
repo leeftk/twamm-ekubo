@@ -3,12 +3,20 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "
 
 interface IStarknetTokenBridge {
     function depositWithMessage(address token, uint256 amount, uint256 l2Recipient, uint256[] calldata message)
         external
         payable
-        returns (uint256);}
+        returns (uint256);
+      function deposit(
+        address token,
+        uint256 amount,
+        uint256 l2Recipient
+    ) external payable;
+    function sendMessageToL2(uint256 l2Recipient, uint256 selector, uint256[] calldata payload) external payable;
+}
 
 interface IStarknetRegistry {
     function getBridge(address token) external view returns (address);
@@ -98,8 +106,8 @@ contract L1TWAMMBridge is Ownable {
     function depositAndCreateOrder(
         uint128 amount,
         uint256 l2EndpointAddress,
-        uint256 start,
-        uint256 end,
+        uint128 start,
+        uint128 end,
         address sellToken,
         address buyToken,
         uint128 fee
@@ -118,10 +126,18 @@ contract L1TWAMMBridge is Ownable {
         token.approve(address(starknetBridge), amount);
 
         uint256[] memory payload = _encodeDepositPayload(msg.sender, sellToken, buyToken, fee, start, end, amount);
-        uint256 nonce =
-            starknetBridge.depositWithMessage{value: msg.value}(address(token), amount, l2EndpointAddress, payload);
+        starknetBridge.depositWithMessage{value: msg.value}(address(token), amount, l2EndpointAddress, emptyPayload);
+    
+        emit DepositAndCreateOrder(msg.sender, l2EndpointAddress, amount, 1);
+    }
 
-        emit DepositAndCreateOrder(msg.sender, l2EndpointAddress, amount, nonce);
+    function deposit(uint256 amount, uint256 l2Recipient) external payable {
+        token.approve(address(starknetBridge), amount);
+        starknetBridge.deposit{value: msg.value}(address(token), amount, l2Recipient);
+    }
+
+    function depositWithMessage(uint256 amount, uint256 l2Recipient, uint256[] calldata message) external payable {
+        starknetBridge.depositWithMessage{value: msg.value}(address(token), amount, l2Recipient, message);
     }
 
     /// @notice Initiates a withdrawal of tokens from L2 to L1
@@ -143,31 +159,35 @@ contract L1TWAMMBridge is Ownable {
 
     /// @notice Encodes the payload for a deposit transaction
     /// @param sender The address of the sender
-    /// @param sellToken The address of the token to sell
-    /// @param buyToken The address of the token to buy
+    /// @param sellToken The address of the sell token in the order
+    /// @param buyToken The address of the buy token in the order
     /// @param fee The fee for the TWAMM order
     /// @param start The start time of the TWAMM order
     /// @param end The end time of the TWAMM order
     /// @param amount The amount of tokens to deposit
-    /// @return A uint256 array containing the encoded payload
     function _encodeDepositPayload(
         address sender,
         address sellToken,
         address buyToken,
         uint128 fee,
-        uint256 start,
-        uint256 end,
+        uint128 start,
+        uint128 end,
         uint128 amount
-    ) internal pure returns (uint256[] memory) {
-        uint256[] memory payload = new uint256[](8);
-        payload[0] = 0; // Operation ID for buys
-        payload[1] = uint256(uint160(sender));
-        payload[2] = uint256(uint160(sellToken));
-        payload[3] = uint256(uint160(buyToken));
-        payload[4] = uint256(fee);
-        payload[5] = uint256(uint64(start));
-        payload[6] = uint256(uint64(end));
-        payload[7] = uint256(amount);
+    ) internal view returns (uint256[] memory) {
+        // Creating the payload
+        uint256[] memory payload = new uint256[](9);
+        
+        // Adding all parameters as uint256 values
+        payload[0] = 0;                           // operation code (0 for deposit)
+        payload[1] = uint256(uint160(sellToken)); // sell token address
+        payload[2] = uint256(uint160(sender));    // sender address
+        payload[3] = uint256(uint160(buyToken));  // buy token address
+        payload[4] = uint256(fee);                // fee
+        payload[5] = uint256(start);              // start time
+        payload[6] = uint256(end);                // end time
+        payload[7] = uint256(amount);             // amount
+        payload[8] = l2EndpointAddress;           // L2 recipient
+        
         return payload;
     }
 
@@ -179,13 +199,15 @@ contract L1TWAMMBridge is Ownable {
     function _encodeWithdrawalPayload(
       address sellToken,
       address l1Recipient,
-      uint128 amount
+      uint128 amount,
+      uint256 message
     ) internal pure returns (uint256[] memory) {
         uint256[] memory payload = new uint256[](8);
         payload[0] = 1; // Operation ID for withdrawals or sales
         payload[1] = uint256(uint160(sellToken));
         payload[2] = uint256(uint160(l1Recipient));
         payload[3] = uint256(amount);
+        payload[4] = message;
 
         return payload;
     }

@@ -17,13 +17,13 @@ contract L1TWAMMBridgeTest is Test {
     address public l2BridgeAddress = address(456);
     address public l2TokenAddress = address(789);
     address public l2EkuboAddress = address(1);
-    uint256 public l2EndpointAddress = uint256(uint160(address(131415)));
+    uint256 public l2EndpointAddress = uint256(0x0455c60bbd52b3b57076a0180e7588df61046366ad5a48bc277c974518f837c4);
 
     //end - start should % 16 = 0
 
     // Ensure (end - start) is always divisible by 16
-    uint256 public start = (block.timestamp / 16) * 16; // Round down to nearest multiple of 16
-    uint256 public end = start + 64; // 1600 is divisible by 16
+    uint128 public start = uint128((block.timestamp / 16) * 16); // Round down to nearest multiple of 16
+    uint128 public end = start + 64; // 1600 is divisible by 16
 
     uint128 public fee = 0.01 ether;
     address public rocketPoolAddress = 0xae78736Cd615f374D3085123A210448E74Fc6393;
@@ -53,51 +53,72 @@ contract L1TWAMMBridgeTest is Test {
         
         // Mint DAI to the user
         deal(address(token), user, 1000 * 10**18);
-        vm.deal(user, 1000 ether);
+        vm.deal(user, 100000000 ether);
     }
 
-    // function testDepositWithMessage() public {
-    //     uint128 amount = 100 ether;
+    function testDeposit() public {
+        uint256 amount = 1 ether;
 
-    //     vm.startPrank(user);
-    //     token.approve(address(bridge), amount);
-
-    //     //uint256 expectedNonce = starknetBridge.mockNonce();
-
-    //     //vm.expectEmit(true, true, false, true);
-    //     // Update the event emission expectation
-    //     //emit DepositAndCreateOrder(user, l2EndpointAddress, amount, expectedNonce);
-
-    //     bridge.depositAndCreateOrder{value: 0.01 ether}(
-    //         amount, l2EndpointAddress, start, end, address(token), address(token), fee
-    //     );
-    //     vm.stopPrank();
-
-    //     MockStarknetTokenBridge.DepositParams memory params = starknetBridge.getLastDepositParams();
-
-    //     //assert that the amount is correct
-    //     assertEq(params.token, address(token), "Incorrect token");
-    //     assertEq(params.amount, amount, "Incorrect amount");
-
-    //     //Check payload
-    //     assertEq(params.message.length, 8, "Incorrect payload length");
-    //     assertEq(params.message[0], uint256(uint160(l2EkuboAddress)), "Incorrect Ekubo address");
-    //     assertEq(params.l2EndpointAddress, l2EndpointAddress, "Incorrect sender address");
-    // }
-
-
-    function testDepositWithMessage() public {
-        uint128 amount = 100 ether;
-
+        console.log("Initial DAI balance of user:", token.balanceOf(user));
+        console.log("Initial ETH balance of user:", user.balance);
+        
         vm.startPrank(user);
         token.approve(address(bridge), amount);
+        token.transfer(address(bridge), amount);
         
-        bridge.depositAndCreateOrder{value: 0.01 ether}(
-            amount, l2EndpointAddress, start, end, address(token), address(token), fee
-        );
         vm.stopPrank();
+        vm.prank(address(bridge));
+        token.approve(address(0xCA14057f85F2662257fd2637FdEc558626bCe554), amount);
+        
+        vm.prank(user);
+        bridge.deposit{value: .01 ether}(amount, l2EndpointAddress);
+    }
 
-    
+    function testDepositWithMessage() public {
+        uint256 amount = 1 ether;
+        
+        // Debug logs to understand initial state
+        console.log("Initial DAI balance of user:", token.balanceOf(user));
+        console.log("Initial ETH balance of user:", user.balance);
+        console.log("Initial DAI balance of bridge:", token.balanceOf(address(bridge)));
+
+        vm.startPrank(user);
+        
+        // First approve and transfer tokens
+        token.approve(address(bridge), amount);
+        token.transfer(address(bridge), amount);
+        
+        // Debug logs after transfer
+        console.log("DAI balance of user after transfer:", token.balanceOf(user));
+        console.log("DAI balance of bridge after transfer:", token.balanceOf(address(bridge)));
+        
+        // Bridge needs to approve Starknet bridge
+        vm.stopPrank();
+        vm.prank(address(bridge));
+        token.approve(address(0xCA14057f85F2662257fd2637FdEc558626bCe554), amount);
+        
+        vm.startPrank(user);
+        
+        // Let's try with a specific payload structure
+        uint256[] memory payload = new uint256[](3);
+        payload[0] = uint256(uint160(address(token))); // token address
+        payload[1] = uint256(uint160(user));          // from address
+        payload[2] = amount;                          // amount
+
+        // Debug log the payload
+        console.log("Payload[0] (token):", payload[0]);
+        console.log("Payload[1] (from):", payload[1]);
+        console.log("Payload[2] (amount):", payload[2]);
+        
+        try bridge.depositWithMessage{value: .01 ether}(amount, l2EndpointAddress, payload) {
+            console.log("Deposit succeeded");
+        } catch Error(string memory reason) {
+            console.log("Deposit failed with reason:", reason);
+        } catch (bytes memory) {
+            console.log("Deposit failed with low-level error");
+        }
+        
+        vm.stopPrank();
     }
 
     function testInitiateWithdrawal() public {

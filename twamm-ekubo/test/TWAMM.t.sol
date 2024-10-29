@@ -23,11 +23,11 @@ contract L1TWAMMBridgeTest is Test {
     //end - start should % 16 = 0
 
     // Ensure timestamps are aligned with the required step sizes
-    uint256 public currentTimestamp = block.timestamp;
-    uint256 public difference = 16 - (currentTimestamp % 16);
-    uint256 public start = currentTimestamp + difference;
+    uint128 public currentTimestamp = uint128(block.timestamp);
+    uint128 public difference = 16 - (currentTimestamp % 16);
+    uint128 public start = currentTimestamp + difference;
     // Let's test with MASSIVE intervals
-    uint256 public end = start + 64;      // 16 * 1048576 = 16777216      (~4.5 hours)
+    uint128 public end = start + 64;      // 16 * 1048576 = 16777216      (~4.5 hours)
 
     uint128 public fee = 0.01 ether;
 
