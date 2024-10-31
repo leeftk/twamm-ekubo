@@ -144,7 +144,7 @@ contract L1TWAMMBridgeTest is Test {
         vm.startPrank(user);
         token.approve(address(bridge), amount);
 
-        vm.expectRevert(L1TWAMMBridge.L1TWAMMBridge__InvalidTimeRange.selector);
+        vm.expectRevert(L1TWAMMBridge.InvalidTimeRange.selector);
         bridge.depositAndCreateOrder(
             amount,
             l2EndpointAddress,
