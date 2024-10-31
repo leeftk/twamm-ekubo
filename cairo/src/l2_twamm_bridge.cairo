@@ -48,6 +48,7 @@ mod L2TWAMMBridge {
         sender_to_amount: Map::<EthAddress, u128>,
         positions_address: ContractAddress,
         token_bridge_address: ContractAddress,
+        order_id_to_depositor: Map::<u64, EthAddress>,
     }
 
     #[derive(Drop, Serde)]
@@ -110,9 +111,11 @@ mod L2TWAMMBridge {
             let order_key = message.order_key;
             
             let positions = IPositionsDispatcher { contract_address: self.positions_address.read() };
-            let (minted, amount) = positions.mint_and_increase_sell_amount(order_key, amount);
+            let (id, minted) = positions.mint_and_increase_sell_amount(order_key, amount);
             assert(minted != 0, 'No tokens minted');
             assert(amount != 0, 'No tokens sold');
+            
+            self.order_id_to_depositor.write(id, depositor);
             
             self.sender_to_amount.write(depositor, amount);
             true
@@ -126,8 +129,9 @@ mod L2TWAMMBridge {
         ) -> bool {
             let order_key = message.order_key;
             let id = message.id;
-            let l1_recipient = depositor;
-            let sale_rate_delta = message.sale_rate_delta;
+            
+            let owner = self.order_id_to_depositor.read(id);
+            assert(owner == depositor, 'Not order owner');
             
             let positions = IPositionsDispatcher { contract_address: self.positions_address.read() };
             let amount_sold = positions.withdraw_proceeds_from_sale_to_self(id, order_key);
@@ -140,7 +144,7 @@ mod L2TWAMMBridge {
 
             let l1_token = EthAddress { address: 0x6B175474E89094C44Da98b954EedeAC495271d0F };    
             let u256_amount_sold = u256 { low: amount_sold, high: 0 };          
-            token_bridge.initiate_token_withdraw(l1_token, l1_recipient, u256_amount_sold);
+            token_bridge.initiate_token_withdraw(l1_token, depositor, u256_amount_sold);
             false
         }
     }
