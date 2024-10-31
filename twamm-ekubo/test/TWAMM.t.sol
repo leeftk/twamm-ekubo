@@ -27,7 +27,7 @@ contract L1TWAMMBridgeTest is Test {
     uint128 public difference = 16 - (currentTimestamp % 16);
     uint128 public start = currentTimestamp + difference;
     // Let's test with MASSIVE intervals
-    uint128 public end = start + 64;      // 16 * 1048576 = 16777216      (~4.5 hours)
+    uint128 public end = start + 64; // 16 * 1048576 = 16777216      (~4.5 hours)
 
     uint128 public fee = 0.01 ether;
 
@@ -122,9 +122,7 @@ contract L1TWAMMBridgeTest is Test {
         emit WithdrawalInitiated(l1Recipient, amount);
 
         vm.prank(bridge.owner());
-        bridge.initiateWithdrawal{value: 0.01 ether}(
-            address(token), l1Recipient, amount
-        );
+        bridge.initiateWithdrawal{value: 0.01 ether}(address(token), l1Recipient, amount);
     }
 
     function testInitiateWithdrawalUnauthorized() public {
@@ -133,9 +131,7 @@ contract L1TWAMMBridgeTest is Test {
 
         vm.expectRevert();
         vm.prank(user);
-        bridge.initiateWithdrawal(
-            address(token), l1Recipient, amount
-        );
+        bridge.initiateWithdrawal(address(token), l1Recipient, amount);
     }
 
     function testInvalidTimeRange() public {
@@ -187,10 +183,10 @@ contract L1TWAMMBridgeTest is Test {
 
         vm.expectEmit(true, true, false, true);
         emit DepositAndCreateOrder(
-            user,               // l1Sender
+            user, // l1Sender
             l2EndpointAddress, // l2Recipient
-            amount,            // amount
-            expectedNonce      // nonce
+            amount, // amount
+            expectedNonce // nonce
         );
 
         bridge.depositAndCreateOrder{value: 0.01 ether}(
@@ -210,45 +206,43 @@ contract L1TWAMMBridgeTest is Test {
         vm.stopPrank();
     }
 
-
-
     function testTimeValidation() public {
         // Let's test various intervals and print results
         uint256[] memory intervals = new uint256[](6);
-        intervals[0] = 16;          // Basic interval
-        intervals[1] = 256;         // 16 * 16
-        intervals[2] = 4096;        // 16 * 256
-        intervals[3] = 65536;       // 16 * 4096
-        intervals[4] = 1048576;     // 16 * 65536
-        intervals[5] = 16777216;    // 16 * 1048576
+        intervals[0] = 16; // Basic interval
+        intervals[1] = 256; // 16 * 16
+        intervals[2] = 4096; // 16 * 256
+        intervals[3] = 65536; // 16 * 4096
+        intervals[4] = 1048576; // 16 * 65536
+        intervals[5] = 16777216; // 16 * 1048576
 
         vm.warp(start);
-        
-        for (uint i = 0; i < intervals.length; i++) {
+
+        for (uint256 i = 0; i < intervals.length; i++) {
             uint256 targetTime = start + intervals[i];
             // Round target time to the nearest valid interval based on distance
             uint256 distance = intervals[i];
             uint256 logScale = 4; // log base 2 of 16
             uint256 msb = mostSignificantBit(distance);
             uint256 step;
-            
+
             if (distance <= 16) {
                 step = 16;
             } else {
                 uint256 power = (msb / logScale) * logScale;
                 step = 1 << power; // 2^power
             }
-            
+
             uint256 roundedTime = (targetTime / step) * step;
-            
+
             bool isValid = bridge.isTimeValidExternal(start, roundedTime);
 
             // console.log(
-            //     "Testing interval:", 
+            //     "Testing interval:",
             //     intervals[i],
-            //     "Step size:", 
+            //     "Step size:",
             //     step,
-            //     "Valid:", 
+            //     "Valid:",
             //     isValid
             // );
             assertTrue(isValid, "Time should be valid after rounding");

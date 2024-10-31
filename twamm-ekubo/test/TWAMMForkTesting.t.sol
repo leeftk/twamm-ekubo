@@ -42,17 +42,22 @@ contract L1TWAMMBridgeTest is Test {
 
     function setUp() public {
         vm.createSelectFork("https://ethereum-rpc.publicnode.com");
-        
+
         // DAI token address on Ethereum mainnet
         address daiAddress = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
         token = MockERC20(daiAddress);
 
-        
-        bridge = new L1TWAMMBridge(address(daiAddress), address(0xCA14057f85F2662257fd2637FdEc558626bCe554), l2EkuboAddress, l2EndpointAddress, address(0x1268cc171c54F2000402DfF20E93E60DF4c96812));
+        bridge = new L1TWAMMBridge(
+            address(daiAddress),
+            address(0xCA14057f85F2662257fd2637FdEc558626bCe554),
+            l2EkuboAddress,
+            l2EndpointAddress,
+            address(0x1268cc171c54F2000402DfF20E93E60DF4c96812)
+        );
         console.log("bridge address", address(bridge));
-        
+
         // Mint DAI to the user
-        deal(address(token), user, 1000 * 10**18);
+        deal(address(token), user, 1000 * 10 ** 18);
         vm.deal(user, 100000000 ether);
     }
 
@@ -61,63 +66,63 @@ contract L1TWAMMBridgeTest is Test {
 
         console.log("Initial DAI balance of user:", token.balanceOf(user));
         console.log("Initial ETH balance of user:", user.balance);
-        
+
         vm.startPrank(user);
         token.approve(address(bridge), amount);
         token.transfer(address(bridge), amount);
-        
+
         vm.stopPrank();
         vm.prank(address(bridge));
         token.approve(address(0xCA14057f85F2662257fd2637FdEc558626bCe554), amount);
-        
+
         vm.prank(user);
-        bridge.deposit{value: .01 ether}(amount, l2EndpointAddress);
+        bridge.deposit{value: 0.01 ether}(amount, l2EndpointAddress);
     }
 
     function testDepositWithMessage() public {
         uint256 amount = 1 ether;
-        
+
         // Debug logs to understand initial state
         console.log("Initial DAI balance of user:", token.balanceOf(user));
         console.log("Initial ETH balance of user:", user.balance);
         console.log("Initial DAI balance of bridge:", token.balanceOf(address(bridge)));
 
         vm.startPrank(user);
-        
+
         // First approve and transfer tokens
         token.approve(address(bridge), amount);
         token.transfer(address(bridge), amount);
-        
+
         // Debug logs after transfer
         console.log("DAI balance of user after transfer:", token.balanceOf(user));
         console.log("DAI balance of bridge after transfer:", token.balanceOf(address(bridge)));
-        
+
         // Bridge needs to approve Starknet bridge
         vm.stopPrank();
         vm.prank(address(bridge));
         token.approve(address(0xCA14057f85F2662257fd2637FdEc558626bCe554), amount);
-        
+
         vm.startPrank(user);
-        
+
         // Let's try with a specific payload structure
         uint256[] memory payload = new uint256[](3);
         payload[0] = uint256(uint160(address(token))); // token address
-        payload[1] = uint256(uint160(user));          // from address
-        payload[2] = amount;                          // amount
+        payload[1] = uint256(uint160(user)); // from address
+        payload[2] = amount; // amount
 
         // Debug log the payload
         console.log("Payload[0] (token):", payload[0]);
         console.log("Payload[1] (from):", payload[1]);
         console.log("Payload[2] (amount):", payload[2]);
-        
-        try bridge.depositWithMessage{value: .01 ether}(amount, l2EndpointAddress, payload) {
+
+        try bridge.depositWithMessage{value: 0.01 ether}(amount, l2EndpointAddress, payload) {
             console.log("Deposit succeeded");
         } catch Error(string memory reason) {
             console.log("Deposit failed with reason:", reason);
         } catch (bytes memory) {
             console.log("Deposit failed with low-level error");
         }
-        
+
         vm.stopPrank();
     }
 
@@ -152,9 +157,7 @@ contract L1TWAMMBridgeTest is Test {
 
         vm.expectRevert();
         vm.prank(user);
-        bridge.initiateWithdrawal(
-            address(token), l1Recipient, amount
-        );
+        bridge.initiateWithdrawal(address(token), l1Recipient, amount);
     }
 
     function testInvalidTimeRange() public {
