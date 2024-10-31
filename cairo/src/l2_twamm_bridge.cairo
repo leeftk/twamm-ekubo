@@ -34,7 +34,6 @@ pub trait IL2TWAMMBridge<TContractState> {
     fn set_token_bridge_address(ref self: TContractState, address: ContractAddress);
 }
 
-
 #[starknet::contract]
 mod L2TWAMMBridge {
     use ekubo::interfaces::positions::{IPositionsDispatcher, IPositionsDispatcherTrait};
@@ -43,12 +42,12 @@ mod L2TWAMMBridge {
     use starknet::storage::Map;
     use super::{ITokenBridge, ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait};
     use super::EthAddress;
+
     #[storage]
     struct Storage {
         sender_to_amount: Map::<EthAddress, u128>,
         positions_address: ContractAddress,
         token_bridge_address: ContractAddress,
-
     }
 
     #[derive(Drop, Serde)]
@@ -58,72 +57,91 @@ mod L2TWAMMBridge {
         id: u64,
         sale_rate_delta: u128,
     }
+
     #[external(v0)]
     #[abi(embed_v0)]
     impl L2TWAMMBridge of super::IL2TWAMMBridge<ContractState> {
-fn on_receive(
-    ref self: ContractState,
-    l2_token: ContractAddress,
-    amount: u128,
-    depositor: EthAddress,
-    message: Span<felt252>
-) -> bool {     
-    let mut message_span = message;
-    
-    // Deserialize the message, handling potential failure
-    match Serde::<Message>::deserialize(ref message_span) {
-        Option::Some(deserialized_message) => {
-            if deserialized_message.operation_type == 0 { 
-                let order_key = deserialized_message.order_key;
-                
-                let positions = IPositionsDispatcher { contract_address: self.positions_address.read() };
-                let (minted, amount) = positions.mint_and_increase_sell_amount(order_key, amount);
-                assert(minted != 0, 'No tokens minted');
-                assert(amount != 0, 'No tokens sold');
-                
-                self.sender_to_amount.write(depositor, amount);
-                true
-            } else {
-           
-                       // Handle deserialization failure
-                       let order_key = deserialized_message.order_key;
-                       let id = deserialized_message.id;
-                       let l1_recipient = depositor;
-                       let sale_rate_delta = deserialized_message.sale_rate_delta;
-                       let positions = IPositionsDispatcher { contract_address: self.positions_address.read() };
-                       let amount_sold = positions.withdraw_proceeds_from_sale_to_self(id, order_key);
-                       //decrease amount in mapping
-                       //self.sender_to_amount.write(depositor, amount - amount_sold);
-                       //send tokens cross chain in bridge
-                       let token_bridge = ITokenBridgeDispatcher { 
-                           contract_address: self.token_bridge_address.read()
-                       };      
-
-                    let l1_token = EthAddress { address: 0x6B175474E89094C44Da98b954EedeAC495271d0F };    
-                    let u256_amount_sold = u256 { low: amount_sold, high: 0 };          
-                    token_bridge.initiate_token_withdraw(l1_token, l1_recipient, u256_amount_sold);
-                       false
+        fn on_receive(
+            ref self: ContractState,
+            l2_token: ContractAddress,
+            amount: u128,
+            depositor: EthAddress,
+            message: Span<felt252>
+        ) -> bool {     
+            let mut message_span = message;
+            
+            match Serde::<Message>::deserialize(ref message_span) {
+                Option::Some(message) => {
+                    match message.operation_type {
+                        0 => self.execute_deposit(depositor, amount, message),
+                        _ => self.execute_withdrawal(depositor, amount, message)
+                    }
+                },
+                Option::None => false
             }
-        },
-        Option::None => {
-            // Handle deserialization failure
-            false
         }
-    }
-}
 
-fn withdraw_proceeds_from_sale_to_self(
-    ref self: ContractState, id: u64, order_key: OrderKey
-) -> u128 {
-    let positions = IPositionsDispatcher { contract_address: self.positions_address.read() };
-    positions.withdraw_proceeds_from_sale_to_self(id, order_key)
-}
-fn set_token_bridge_address(ref self: ContractState, address: ContractAddress) {
-    self.token_bridge_address.write(address);
-}
+        fn withdraw_proceeds_from_sale_to_self(
+            ref self: ContractState, 
+            id: u64, 
+            order_key: OrderKey
+        ) -> u128 {
+            let positions = IPositionsDispatcher { contract_address: self.positions_address.read() };
+            positions.withdraw_proceeds_from_sale_to_self(id, order_key)
+        }
+
+        fn set_token_bridge_address(ref self: ContractState, address: ContractAddress) {
+            self.token_bridge_address.write(address);
+        }
 
         fn set_positions_address(ref self: ContractState, address: ContractAddress) {
             self.positions_address.write(address);
+        }
+    }
+
+    #[generate_trait]
+    impl PrivateFunctions of PrivateFunctionsTrait {
+        fn execute_deposit(
+            ref self: ContractState,
+            depositor: EthAddress,
+            amount: u128,
+            message: Message
+        ) -> bool {
+            let order_key = message.order_key;
+            
+            let positions = IPositionsDispatcher { contract_address: self.positions_address.read() };
+            let (minted, amount) = positions.mint_and_increase_sell_amount(order_key, amount);
+            assert(minted != 0, 'No tokens minted');
+            assert(amount != 0, 'No tokens sold');
+            
+            self.sender_to_amount.write(depositor, amount);
+            true
+        }
+
+        fn execute_withdrawal(
+            ref self: ContractState,
+            depositor: EthAddress,
+            amount: u128,
+            message: Message
+        ) -> bool {
+            let order_key = message.order_key;
+            let id = message.id;
+            let l1_recipient = depositor;
+            let sale_rate_delta = message.sale_rate_delta;
+            
+            let positions = IPositionsDispatcher { contract_address: self.positions_address.read() };
+            let amount_sold = positions.withdraw_proceeds_from_sale_to_self(id, order_key);
+            
+            self.sender_to_amount.write(depositor, amount - amount_sold);
+            
+            let token_bridge = ITokenBridgeDispatcher { 
+                contract_address: self.token_bridge_address.read()
+            };      
+
+            let l1_token = EthAddress { address: 0x6B175474E89094C44Da98b954EedeAC495271d0F };    
+            let u256_amount_sold = u256 { low: amount_sold, high: 0 };          
+            token_bridge.initiate_token_withdraw(l1_token, l1_recipient, u256_amount_sold);
+            false
         }
     }
 }
