@@ -30,8 +30,11 @@ pub trait IL2TWAMMBridge<TContractState> {
         message: Span<felt252>
     ) -> bool;
     fn set_positions_address(ref self: TContractState, address: ContractAddress);
-    fn withdraw_proceeds_from_sale_to_self(ref self: TContractState, id: u64, order_key: OrderKey) -> u128;
+    fn withdraw_proceeds_from_sale_to_self(
+        ref self: TContractState, id: u64, order_key: OrderKey
+    ) -> u128;
     fn set_token_bridge_address(ref self: TContractState, address: ContractAddress);
+    
 }
 
 #[starknet::contract]
@@ -89,6 +92,7 @@ mod L2TWAMMBridge {
         ) -> u128 {
             let positions = IPositionsDispatcher { contract_address: self.positions_address.read() };
             positions.withdraw_proceeds_from_sale_to_self(id, order_key)
+           
         }
 
         fn set_token_bridge_address(ref self: ContractState, address: ContractAddress) {

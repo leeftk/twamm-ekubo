@@ -1,1 +1,1 @@
-twammbridge_integrationtest::test_l2_twamm_bridge::test_on_receive_with_sale_rate_delta
+twammbridge_integrationtest::test_l2_twamm_bridge::test_mint_and_withdraw_proceeds_from_sale_to_self
