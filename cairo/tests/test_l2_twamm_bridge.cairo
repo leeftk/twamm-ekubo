@@ -127,94 +127,102 @@ struct Message {
     sale_rate_delta: u128,
 }
 
-#[test]
-#[fork("mainnet")]
-fn test_mint_and_withdraw_proceeds_from_sale_to_self() {
-    let MAX_TICK_SPACING: u128 = 354892;
-    let pool_key = setup();
-    let positions_contract = positions();
-
-    
+/// Sets up a pool with initial liquidity
+fn setup_pool_with_liquidity(pool_key: PoolKey) {
     ekubo_core().initialize_pool(pool_key, i129 { mag: 0, sign: false });
+    
+    // Transfer initial liquidity
     IERC20Dispatcher { contract_address: pool_key.token0 }
-    .transfer(positions().contract_address, 100);
+        .transfer(positions().contract_address, 100);
     IERC20Dispatcher { contract_address: pool_key.token1 }
-    .transfer(positions().contract_address, 100);
+        .transfer(positions().contract_address, 100);
 
-   positions()
-   .mint_and_deposit(
-       pool_key,
-       Bounds { 
-        lower: i129 { mag: 88368108, sign: true },
-        upper: i129 { mag: 88368108, sign: false },
-       },
-       Zero::zero()
-   );
-   // Get the liquidity of the pool
-   let liquidity = ekubo_core().get_pool_liquidity(pool_key);
-   assert(liquidity > 0, 'liquidity should be greater');
-   
-    // Set up time parameters
+    // Mint initial position
+    positions()
+        .mint_and_deposit(
+            pool_key,
+            Bounds { 
+                lower: i129 { mag: 88368108, sign: true },
+                upper: i129 { mag: 88368108, sign: false },
+            },
+            Zero::zero()
+        );
+}
+
+/// Creates an order key with standard test parameters
+fn create_test_order_key(pool_key: PoolKey) -> OrderKey {
     let current_timestamp = get_block_timestamp();
-    // let duration = 7 * 24 * 60 * 60; // 7 days in seconds
     let difference = 16 - (current_timestamp % 16);
-    let power_of_16 = 16 * 16; // 16 hours in seconds
     let start_time = (current_timestamp + difference);
     let end_time = start_time + 64;
 
-    let order_key = OrderKey {
+    OrderKey {
         sell_token: pool_key.token0,
         buy_token: pool_key.token1,
         fee: 0,
         start_time: start_time,
         end_time: end_time
-    };
-    // Approve the positions contract to spend tokens
-    let transfer_amount = 10000_u256;
-    // Transfer tokens to the positions contract
-    
-    let fake_caller = contract_address_const::<'fake_caller'>();
-    let token0_balance = IERC20Dispatcher { contract_address: pool_key.token0 }
-    .balanceOf(get_contract_address());
-    let token1_balance = IERC20Dispatcher { contract_address: pool_key.token1 }
-    .balanceOf(get_contract_address());
-    assert(token0_balance >= 1000000, 'Insufficient token0 balance');
-    assert(token1_balance >= 1000000, 'Insufficient token1 balance');
-    //transfer tokens to positions contract
-    IERC20Dispatcher { contract_address: pool_key.token0 }
-    .transfer(positions().contract_address, 1000000);  // Increased to 1M tokens
-    IERC20Dispatcher { contract_address: pool_key.token1 }
-    .transfer(positions().contract_address, 1000000);  // 
+    }
+}
 
-    let token0_balance = IERC20Dispatcher { contract_address: pool_key.token0 }
-    .balanceOf(positions().contract_address);
-    let token1_balance = IERC20Dispatcher { contract_address: pool_key.token1 }
-    .balanceOf(positions().contract_address);
-    assert(token0_balance >= 1000000, 'Insufficient token0 balance');
-    assert(token1_balance >= 1000000, 'Insufficient token1 balance');
-    // // Call the function using the dispatcher
-    let (token_id, new_sell_amount) = positions_contract
+/// Transfers tokens to a target contract
+fn transfer_tokens_to_contract(token0: ContractAddress, token1: ContractAddress, target: ContractAddress, amount: u256) {
+    IERC20Dispatcher { contract_address: token0 }
+        .transfer(target, amount);
+    IERC20Dispatcher { contract_address: token1 }
+        .transfer(target, amount);
+}
+
+/// Asserts token balances are sufficient
+fn assert_token_balances(token0: ContractAddress, token1: ContractAddress, owner: ContractAddress, min_amount: u256) {
+    let token0_balance = IERC20Dispatcher { contract_address: token0 }
+        .balanceOf(owner);
+    let token1_balance = IERC20Dispatcher { contract_address: token1 }
+        .balanceOf(owner);
+    assert(token0_balance >= min_amount, 'Insufficient token0 balance');
+    assert(token1_balance >= min_amount, 'Insufficient token1 balance');
+}
+
+#[test]
+#[fork("mainnet")]
+fn test_mint_and_withdraw_proceeds_from_sale_to_self() {
+    let pool_key = setup();
+    setup_pool_with_liquidity(pool_key);
+    
+    // Assert initial balances
+    assert_token_balances(pool_key.token0, pool_key.token1, get_contract_address(), 1000000);
+    
+    // Transfer tokens to positions contract
+    transfer_tokens_to_contract(pool_key.token0, pool_key.token1, positions().contract_address, 1000000);
+    
+    // Verify positions contract balances
+    assert_token_balances(pool_key.token0, pool_key.token1, positions().contract_address, 1000000);
+    
+    // Create order key and mint position
+    let order_key = create_test_order_key(pool_key);
+    let (token_id, new_sell_amount) = positions()
         .mint_and_increase_sell_amount(order_key, 100);
 
     assert_eq!(token_id > 0, true, "token_id should be greater than 0");
     assert_eq!(
         new_sell_amount > 10000, true, "New sell amount should be greater than original amount"
     );
-     let twam_address = contract_address_const::<
-                0x043e4f09c32d13d43a880e85f69f7de93ceda62d6cf2581a582c6db635548fdc
-            >();
-    cheat_block_timestamp(twam_address, start_time + 16, CheatSpan::Indefinite);
-    IERC20Dispatcher { contract_address: pool_key.token0 }
-    .transfer(router().contract_address, 1000000);
-    IERC20Dispatcher { contract_address: pool_key.token1 }
-    .transfer(router().contract_address, 1000000);
+
+    // Setup time and price conditions
+    let twam_address = contract_address_const::<
+        0x043e4f09c32d13d43a880e85f69f7de93ceda62d6cf2581a582c6db635548fdc
+    >();
+    cheat_block_timestamp(twam_address, order_key.start_time + 16, CheatSpan::Indefinite);
+    
+    // Transfer tokens to router and move price
+    transfer_tokens_to_contract(pool_key.token0, pool_key.token1, router().contract_address, 1000000);
     move_price_to_tick(pool_key, i129 { mag: 354892, sign: false });
     
-    let initial_time = get_block_timestamp();
-    let new_time = initial_time + 3600; // 1 hour later
+    // Advance time and withdraw proceeds
+    let new_time = get_block_timestamp() + 3600; // 1 hour later
     cheat_block_timestamp(twam_address, new_time, CheatSpan::Indefinite);
 
-    let result = positions_contract.withdraw_proceeds_from_sale_to_self(token_id, order_key);
+    let result = positions().withdraw_proceeds_from_sale_to_self(token_id, order_key);
     assert(result != 0, 'withdraw_proceeds_from');
 }
 
