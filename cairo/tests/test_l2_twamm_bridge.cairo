@@ -76,7 +76,7 @@ fn setup() -> PoolKey {
     let token_class = declare("TestToken").unwrap().contract_class();
     let owner = get_contract_address();
     let (tokenA, tokenB) = (
-        deploy_token(token_class, owner, 100000), deploy_token(token_class, owner, 100000)
+        deploy_token(token_class, owner, 10000000000000), deploy_token(token_class, owner, 10000000000)
     );
     let (token0, token1) = if tokenA.contract_address < tokenB.contract_address {
         (tokenA, tokenB)
@@ -87,7 +87,7 @@ fn setup() -> PoolKey {
         token0: token0.contract_address,
         token1: token1.contract_address,
         fee: 0,
-        tick_spacing: 128,
+        tick_spacing: 354892,
         extension: contract_address_const::<
             0x043e4f09c32d13d43a880e85f69f7de93ceda62d6cf2581a582c6db635548fdc
         >(),
@@ -104,7 +104,7 @@ fn move_price_to_tick(pool_key: PoolKey, tick: i129) {
                 RouteNode {
                     pool_key, sqrt_ratio_limit: mathlib().tick_to_sqrt_ratio(tick), skip_ahead: 0,
                 },
-                TokenAmount { token: pool_key.token1, amount: i129 { mag: 1, sign: false }, }
+                TokenAmount { token: pool_key.token1, amount: i129 { mag: 1000, sign: false }, }
             );
     } else if tick_current > tick {
         router()
@@ -114,7 +114,7 @@ fn move_price_to_tick(pool_key: PoolKey, tick: i129) {
                     sqrt_ratio_limit: mathlib().tick_to_sqrt_ratio(tick) + 1,
                     skip_ahead: 0,
                 },
-                TokenAmount { token: pool_key.token0, amount: i129 { mag: 1, sign: false }, }
+                TokenAmount { token: pool_key.token0, amount: i129 { mag: 1000, sign: false }, }
             );
     }
 }
@@ -134,30 +134,26 @@ fn test_mint_and_withdraw_proceeds_from_sale_to_self() {
     let pool_key = setup();
     let positions_contract = positions();
 
-
-    let pool_key = PoolKey {
-        token0: pool_key.token0,
-        token1: pool_key.token1,
-        fee: 0,
-        tick_spacing: 354892,
-        extension: contract_address_const::<
-            0x043e4f09c32d13d43a880e85f69f7de93ceda62d6cf2581a582c6db635548fdc
-        >(),
-    };
     
     ekubo_core().initialize_pool(pool_key, i129 { mag: 0, sign: false });
-    // let result = IERC20Dispatcher { contract_address: pool_key.token0 }
-    //     .transfer(positions_contract.contract_address, 100);
-    // let result = IERC20Dispatcher { contract_address: pool_key.token1 }
-    //     .transfer(positions_contract.contract_address, 100);
-    // assert(result == true, 'transfer should return true');
-//    // Mint and deposit in a single call
+    IERC20Dispatcher { contract_address: pool_key.token0 }
+    .transfer(positions().contract_address, 100);
+    IERC20Dispatcher { contract_address: pool_key.token1 }
+    .transfer(positions().contract_address, 100);
+
    positions()
    .mint_and_deposit(
        pool_key,
-       Bounds { lower: Zero::zero(), upper: i129 { mag: MAX_TICK_SPACING, sign: false } },
+       Bounds { 
+        lower: i129 { mag: 88368108, sign: true },
+        upper: i129 { mag: 88368108, sign: false },
+       },
        Zero::zero()
    );
+   // Get the liquidity of the pool
+   let liquidity = ekubo_core().get_pool_liquidity(pool_key);
+   assert(liquidity > 0, 'liquidity should be greater');
+   
     // Set up time parameters
     let current_timestamp = get_block_timestamp();
     // let duration = 7 * 24 * 60 * 60; // 7 days in seconds
@@ -178,28 +174,41 @@ fn test_mint_and_withdraw_proceeds_from_sale_to_self() {
     // Transfer tokens to the positions contract
     
     let fake_caller = contract_address_const::<'fake_caller'>();
+    let token0_balance = IERC20Dispatcher { contract_address: pool_key.token0 }
+    .balanceOf(get_contract_address());
+    let token1_balance = IERC20Dispatcher { contract_address: pool_key.token1 }
+    .balanceOf(get_contract_address());
+    assert(token0_balance >= 1000000, 'Insufficient token0 balance');
+    assert(token1_balance >= 1000000, 'Insufficient token1 balance');
     //transfer tokens to positions contract
     IERC20Dispatcher { contract_address: pool_key.token0 }
-    .transfer(positions_contract.contract_address, 100);
+    .transfer(positions().contract_address, 1000000);  // Increased to 1M tokens
     IERC20Dispatcher { contract_address: pool_key.token1 }
-    .transfer(positions_contract.contract_address, 100);
+    .transfer(positions().contract_address, 1000000);  // 
 
-
-    start_cheat_caller_address(get_contract_address(), fake_caller);
-   
-    // Call the function using the dispatcher
+    let token0_balance = IERC20Dispatcher { contract_address: pool_key.token0 }
+    .balanceOf(positions().contract_address);
+    let token1_balance = IERC20Dispatcher { contract_address: pool_key.token1 }
+    .balanceOf(positions().contract_address);
+    assert(token0_balance >= 1000000, 'Insufficient token0 balance');
+    assert(token1_balance >= 1000000, 'Insufficient token1 balance');
+    // // Call the function using the dispatcher
     let (token_id, new_sell_amount) = positions_contract
-        .mint_and_increase_sell_amount(order_key, 1);
+        .mint_and_increase_sell_amount(order_key, 100);
 
     assert_eq!(token_id > 0, true, "token_id should be greater than 0");
     assert_eq!(
         new_sell_amount > 10000, true, "New sell amount should be greater than original amount"
     );
-    let twam_address = contract_address_const::<
+     let twam_address = contract_address_const::<
                 0x043e4f09c32d13d43a880e85f69f7de93ceda62d6cf2581a582c6db635548fdc
             >();
-    cheat_block_timestamp(twam_address, start_time + 64, CheatSpan::Indefinite);
-    move_price_to_tick(pool_key, i129 { mag: 200, sign: false });
+    cheat_block_timestamp(twam_address, start_time + 16, CheatSpan::Indefinite);
+    IERC20Dispatcher { contract_address: pool_key.token0 }
+    .transfer(router().contract_address, 1000000);
+    IERC20Dispatcher { contract_address: pool_key.token1 }
+    .transfer(router().contract_address, 1000000);
+    move_price_to_tick(pool_key, i129 { mag: 354892, sign: false });
     
     let initial_time = get_block_timestamp();
     let new_time = initial_time + 3600; // 1 hour later
