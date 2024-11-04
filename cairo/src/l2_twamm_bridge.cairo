@@ -18,6 +18,12 @@ pub trait ITokenBridge<TContractState> {
         l1_recipient: EthAddress,
         amount: u256
     );
+    fn handle_deposit(
+    ref self: TContractState, 
+    from_address: felt252, 
+    l2_recipient: ContractAddress, 
+    amount: u256,
+);
 }
 
 #[starknet::interface]
@@ -34,6 +40,7 @@ pub trait IL2TWAMMBridge<TContractState> {
         ref self: TContractState, id: u64, order_key: OrderKey
     ) -> u128;
     fn set_token_bridge_address(ref self: TContractState, address: ContractAddress);
+    fn get_token_id_by_depositor(ref self: TContractState, depositor: EthAddress) -> u64;
     
 }
 
@@ -52,6 +59,7 @@ mod L2TWAMMBridge {
         positions_address: ContractAddress,
         token_bridge_address: ContractAddress,
         order_id_to_depositor: Map::<u64, EthAddress>,
+        order_depositor_to_id: Map::<EthAddress, u64>,
     }
 
     #[derive(Drop, Serde)]
@@ -102,7 +110,15 @@ mod L2TWAMMBridge {
         fn set_positions_address(ref self: ContractState, address: ContractAddress) {
             self.positions_address.write(address);
         }
+        fn get_token_id_by_depositor(ref self: ContractState, depositor: EthAddress) -> u64 {
+            self.order_depositor_to_id.read(depositor)
+        }
+
     }
+
+
+
+
 
     #[generate_trait]
     impl PrivateFunctions of PrivateFunctionsTrait {
@@ -120,6 +136,7 @@ mod L2TWAMMBridge {
             assert(amount != 0, 'No tokens sold');
             
             self.order_id_to_depositor.write(id, depositor);
+            self.order_depositor_to_id.write(depositor, id);
             
             self.sender_to_amount.write(depositor, amount);
             true
@@ -139,17 +156,18 @@ mod L2TWAMMBridge {
             
             let positions = IPositionsDispatcher { contract_address: self.positions_address.read() };
             let amount_sold = positions.withdraw_proceeds_from_sale_to_self(id, order_key);
+            assert(amount_sold != 0, 'No tokens sold');
             
             self.sender_to_amount.write(depositor, amount - amount_sold);
             
-            let token_bridge = ITokenBridgeDispatcher { 
-                contract_address: self.token_bridge_address.read()
-            };      
+            // let token_bridge = ITokenBridgeDispatcher { 
+            //     contract_address: self.token_bridge_address.read()
+            // };      
 
-            let l1_token = EthAddress { address: 0x6B175474E89094C44Da98b954EedeAC495271d0F };    
-            let u256_amount_sold = u256 { low: amount_sold, high: 0 };          
-            token_bridge.initiate_token_withdraw(l1_token, depositor, u256_amount_sold);
-            false
+            // let l1_token = EthAddress { address: 0x6B175474E89094C44Da98b954EedeAC495271d0F };    
+            // let u256_amount_sold = u256 { low: amount_sold, high: 0 };          
+            // token_bridge.initiate_token_withdraw(l1_token, depositor, u256_amount_sold);
+            true
         }
     }
 }
