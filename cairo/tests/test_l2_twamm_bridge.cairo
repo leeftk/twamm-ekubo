@@ -214,81 +214,74 @@ pub trait ITokenBridge<TContractState> {
     );
 }
 
+/// Creates a standard message array for TWAMM operations
+fn create_twamm_message(
+    operation_type: u8,
+    pool_key: PoolKey,
+    order_key: OrderKey,
+    token_id: Option<u64>
+) -> Array<felt252> {
+    let mut message = array![
+        operation_type.into(),
+        L1_DAI_ADDRESS.into(),
+        0,
+        0,
+        0,
+        pool_key.token0.into(),
+        pool_key.token1.into(),
+        0,
+        order_key.start_time.into(),
+        order_key.end_time.into(),
+    ];
+    
+    // Add token_id for withdrawal messages
+    if operation_type == 1 {
+        message.append(token_id.unwrap().into());
+    }
+    
+    message
+}
 
+/// Sets up a standard test environment
+fn setup_test_environment() -> (PoolKey, IL2TWAMMBridgeDispatcher, OrderKey) {
+    let pool_key = setup();
+    setup_pool_with_liquidity(pool_key);
+    
+    assert_token_balances(pool_key.token0, pool_key.token1, get_contract_address(), 10000);
+    transfer_tokens_to_contract(pool_key.token0, pool_key.token1, positions().contract_address, 10000);
+    
+    let bridge = setup_bridge();
+    let order_key = create_test_order_key(pool_key);
+    
+    (pool_key, bridge, order_key)
+}
 
 #[test]
 #[fork("mainnet")]
 fn test_on_receive_create_twamm_order() {
-    // Initial setup
-    let pool_key = setup();
-    setup_pool_with_liquidity(pool_key);
+    let (pool_key, bridge, order_key) = setup_test_environment();
     
-    // Assert initial balances and transfer tokens
-    assert_token_balances(pool_key.token0, pool_key.token1, get_contract_address(), 10000);
-    transfer_tokens_to_contract(pool_key.token0, pool_key.token1, positions().contract_address, 10000);
-    
-    // Setup bridge and order
-    let bridge = setup_bridge();
-    let order_key = create_test_order_key(pool_key);
-    
-    // Create message array with new format
-    let mut message_array = array![
-        0, // operation_type
-        L1_DAI_ADDRESS, // from_address/depositor
-        0, // padding/unused
-        0, // padding/unused
-        0, // padding/unused
-        pool_key.token0.into(), // sell_token
-        pool_key.token1.into(), // buy_token
-        0, // fee
-        order_key.start_time.into(), // start_time
-        order_key.end_time.into(), // end_time
-    ];
-    
-    // Test parameters and execution
+    let message = create_twamm_message(0, pool_key, order_key, Option::None);
     let amount = 1000_u128;
     let depositor = EthAddress { address: L1_DAI_ADDRESS };
-    let result = bridge.on_receive(pool_key.token0, amount, depositor, message_array.span());
+    
+    let result = bridge.on_receive(pool_key.token0, amount, depositor, message.span());
     assert(result == true, 'on_receive should return true');
 }
-
 
 #[test]
 #[fork("mainnet")]
 fn test_withdraw_proceeds_via_message() {
-    // Initial setup
-    let pool_key = setup();
-    setup_pool_with_liquidity(pool_key);
+    let (pool_key, bridge, order_key) = setup_test_environment();
     
-    // Assert initial balances and transfer tokens
-    assert_token_balances(pool_key.token0, pool_key.token1, get_contract_address(), 10000);
-    transfer_tokens_to_contract(pool_key.token0, pool_key.token1, positions().contract_address, 10000);
-    
-    // Setup bridge and order
-    let bridge = setup_bridge();
-    let order_key = create_test_order_key(pool_key);
-    
-    // Initial deposit message
-    let mut deposit_message = array![
-        0, // operation_type
-        L1_DAI_ADDRESS, // from_address/depositor
-        0, // padding/unused
-        0, // padding/unused
-        0, // padding/unused
-        pool_key.token0.into(), // sell_token
-        pool_key.token1.into(), // buy_token
-        0, // fee
-        order_key.start_time.into(), // start_time
-        order_key.end_time.into(), // end_time
-    ];
-    
-    // // Test parameters and execution
+    // Initial deposit
+    let deposit_message = create_twamm_message(0, pool_key, order_key, Option::None);
     let amount = 1000_u128;
     let depositor = EthAddress { address: L1_DAI_ADDRESS };
-    // let result = bridge.on_receive(pool_key.token0, amount, depositor, deposit_message.span());
-    // assert(result == true, 'deposit should succeed');
+    let result = bridge.on_receive(pool_key.token0, amount, depositor, deposit_message.span());
+    assert(result == true, 'deposit should succeed');
 
-    // Time and price setup remains the same
+    // Setup time and price conditions
     let twam_address = contract_address_const::<TWAMM_ADDRESS>();
     cheat_block_timestamp(twam_address, order_key.start_time + 16, CheatSpan::Indefinite);
     
@@ -298,60 +291,11 @@ fn test_withdraw_proceeds_via_message() {
     let new_time = get_block_timestamp() + 3600;
     cheat_block_timestamp(twam_address, new_time, CheatSpan::Indefinite);
     
+    // Withdrawal
     let token_id = bridge.get_id_from_depositor(depositor);
+    let withdrawal_message = create_twamm_message(1, pool_key, order_key, Option::Some(token_id));
     
-    // Withdrawal message with new format
-    let mut withdrawal_message = array![
-        1, // operation_type for withdrawal
-        L1_DAI_ADDRESS, // from_address/depositor
-        0, // padding/unused
-        0, // padding/unused
-        0, // padding/unused
-        pool_key.token0.into(), // sell_token
-        pool_key.token1.into(), // buy_token
-        0, // fee
-        order_key.start_time.into(), // start_time
-        order_key.end_time.into(), // end_time
-        token_id.into(), // token_id
-    ];
-
-    // let result = bridge.on_receive(pool_key.token0, amount, depositor, withdrawal_message.span());
-    // assert(result == true, 'withdrawal should succeed');
-}
-
-
-
-#[test]
-#[fork("mainnet")]
-fn test_send_message_to_bridge() {
-    // L2 DAI token address
-    let l2_dai_address = contract_address_const::<0x06abf2636072eb8716d55cb1a9f885cb2c5ed9013c69d8c8e035a8fb49c414e3>();
-    let token_bridge_address = contract_address_const::<0x0616757a151c21f9be8775098d591c2807316d992bbc3bb1a5c1821630589256>();
-    
-    // Create DAI dispatcher
-    let l2_dai = IERC20Dispatcher { contract_address: l2_dai_address };
-    let caller_address = contract_address_const::<0x04758595201d9d01be9f8bd232fe3a1c0b5c7b953219c9faa35779b3e73c214c>();
-    start_cheat_caller_address(get_contract_address(), caller_address);
- 
-    // Swap the order of arguments - first arg should be the address to spoof FROM, second arg is the address to spoof TO
-    
-    //verify balance is greater than 100
-    start_cheat_caller_address(l2_dai_address, caller_address);
-    // assert(l2_dai.balanceOf(caller_address) > 100, 'Balance should');
-    // let result = l2_dai.transfer(get_contract_address(), 100);
-    // assert(result == true, 'Transfer should return true');
-    // assert(l2_dai.balanceOf(get_contract_address()) > 0, 'Balance should1');
-    let l1_dai_bridge_address = EthAddress { address: 0xCA14057f85F2662257fd2637FdEc558626bCe554 };
-    // // Approve the bridge to spend our tokens
-    // l2_dai.approve(token_bridge_address, 100);
-    ITokenBridgeDispatcher { contract_address: token_bridge_address }
-        .handle_deposit(l1_dai_bridge_address.into(), get_contract_address(), 100);
-  
-    // ITokenBridgeDispatcher { contract_address: token_bridge_address }
-    //     .initiate_token_withdraw(
-    //         EthAddress { address: 0x6B175474E89094C44Da98b954EedeAC495271d0F }, // L1 DAI address
-    //         EthAddress { address: 0x1B382A7b4496F14e0AAA2DA1E1626Da400426A03 }, // L1 recipient (using same address for example)
-    //         100
-    //     );
+    let result = bridge.on_receive(pool_key.token0, amount, depositor, withdrawal_message.span());
+    assert(result == true, 'withdrawal should succeed');
 }
 
