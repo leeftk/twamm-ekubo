@@ -98,7 +98,7 @@ contract L1TWAMMBridgeTest is Test {
         // Assertions remain the same
         assertEq(params.token, address(token), "Incorrect token");
         assertEq(params.amount, amount, "Incorrect amount");
-        assertEq(params.message.length, 8, "Incorrect payload length");
+        assertEq(params.message.length, 7, "Incorrect payload length");
         // assertEq(params.message[0], uint256(uint160(l2EkuboAddress)), "Incorrect Ekubo address");
         assertEq(params.l2EndpointAddress, l2EndpointAddress, "Incorrect sender address");
     }
@@ -236,7 +236,7 @@ contract L1TWAMMBridgeTest is Test {
             uint256 roundedTime = (targetTime / step) * step;
 
             bool isValid = bridge.isTimeValidExternal(start, roundedTime);
-
+            
             // console.log(
             //     "Testing interval:",
             //     intervals[i],

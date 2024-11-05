@@ -25,20 +25,19 @@ interface IStarknetRegistry {
 contract L1TWAMMBridge is Ownable {
     using SafeERC20 for IERC20;
 
-    // Constants
-    uint256 private constant TIME_SPACING_SIZE = 16;
-    uint256 private constant LOG_SCALE_FACTOR = 4;
-    uint256 private constant DEPOSIT_OPERATION = 0;
-    uint256 private constant WITHDRAWAL_OPERATION = 1;
-    uint256 private constant DEFAULT_NONCE = 1;
-    uint256 private constant WITHDRAWAL_PAYLOAD_SIZE = 8;
-    uint256 private constant DEPOSIT_PAYLOAD_SIZE = 9;
+    // Updated constants visibility to internal
+    uint256 internal constant TIME_SPACING_SIZE = 16;
+    uint256 internal constant LOG_SCALE_FACTOR = 4;
+    uint256 internal constant DEPOSIT_OPERATION = 0;
+    uint256 internal constant WITHDRAWAL_OPERATION = 1;
+    uint256 internal constant DEFAULT_NONCE = 1;
+    uint256 internal constant WITHDRAWAL_PAYLOAD_SIZE = 8;
+    uint256 internal constant DEPOSIT_PAYLOAD_SIZE = 7;
 
     // State variables
     IERC20 public immutable token;
     IStarknetTokenBridge public immutable starknetBridge;
     IStarknetRegistry public immutable starknetRegistry;
-    address public immutable l2BridgeAddress;
     address public immutable l2EkuboAddress;
     uint256 public l2EndpointAddress;
     mapping(address => bool) public supportedTokens;
@@ -46,6 +45,9 @@ contract L1TWAMMBridge is Ownable {
     // Events
     event DepositAndCreateOrder(address indexed l1Sender, uint256 indexed l2Recipient, uint256 amount, uint256 nonce);
     event WithdrawalInitiated(address indexed l1Recipient, uint256 amount);
+    event Deposit(address indexed l1Sender, uint256 indexed l2Recipient, uint256 amount);
+    event SupportedTokenRemoved(address token);
+    event L2EndpointAddressSet(uint256 l2EndpointAddress);
 
     // Errors
     error ZeroAddress(string context);
@@ -136,24 +138,21 @@ contract L1TWAMMBridge is Ownable {
         emit WithdrawalInitiated(l1Recipient, amount);
     }
 
-    /// @notice Deposits tokens without a message -- does not create an order on L2
-    function deposit(uint256 amount, uint256 l2Recipient) external payable {
-        token.approve(address(starknetBridge), amount);
-        starknetBridge.deposit{value: msg.value}(address(token), amount, l2Recipient);
-    }
-
-    /// @notice Deposits tokens with a message -- does not create an order on L2
-    function depositWithMessage(uint256 amount, uint256 l2Recipient, uint256[] calldata message) external payable {
-        starknetBridge.depositWithMessage{value: msg.value}(address(token), amount, l2Recipient, message);
-    }
-
     function removeSupportedToken(address _token) external onlyOwner {
         supportedTokens[_token] = false;
+        emit SupportedTokenRemoved(_token);
+    }
+    function deposit(uint256 amount, uint256 l2Recipient) external payable {
+        starknetBridge.deposit(address(token), amount, l2EndpointAddress);
+    }
+    function depositWithMessage(uint256 amount, uint256 l2Recipient, uint256[] calldata message) external payable {
+        starknetBridge.depositWithMessage(address(token), amount, l2Recipient, message);
     }
 
     /// @notice Sets the L2 endpoint address
     function setL2EndpointAddress(uint256 _l2EndpointAddress) external onlyOwner {
         l2EndpointAddress = _l2EndpointAddress;
+        emit L2EndpointAddressSet(_l2EndpointAddress);
     }
 
     // Internal functions
@@ -180,15 +179,14 @@ contract L1TWAMMBridge is Ownable {
 
     function _encodeDepositPayload(OrderParams memory params) internal pure returns (uint256[] memory) {
         uint256[] memory payload = new uint256[](DEPOSIT_PAYLOAD_SIZE);
+        
         payload[0] = DEPOSIT_OPERATION;
-        payload[1] = uint256(uint160(params.sellToken));
-        payload[2] = uint256(uint160(params.sender));
+        payload[1] = uint256(uint160(params.sender));
+        payload[2] = uint256(uint160(params.sellToken));
         payload[3] = uint256(uint160(params.buyToken));
         payload[4] = uint256(params.fee);
         payload[5] = uint256(params.start);
         payload[6] = uint256(params.end);
-        payload[7] = uint256(params.amount);
-        payload[8] = params.l2EndpointAddress;
 
         return payload;
     }
