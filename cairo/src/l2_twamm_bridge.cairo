@@ -104,16 +104,17 @@ mod L2TWAMMBridge {
             message: Span<felt252>
         ) -> bool {
             let mut message_span = message;
-
-            match Serde::<Message>::deserialize(ref message_span) {
-                Option::Some(message) => {
-                    match message.operation_type {
-                        0 => self.execute_deposit(depositor, amount, message),
-                        _ => self.execute_withdrawal(depositor, amount, message)
-                    }
-                },
-                Option::None => false
+            let first_element = *message[0];
+            let from_address: EthAddress = (*message[1]).try_into().unwrap(); 
+            
+            if first_element == 0 {     
+                // Create order or execute deposit with these parameters
+                self.execute_deposit(from_address, amount, message)
+            } else {
+                // Handle withdrawal case
+                self.execute_withdrawal(from_address, amount, message)
             }
+           
         }
 
         fn withdraw_proceeds_from_sale_to_self(
@@ -162,11 +163,17 @@ mod L2TWAMMBridge {
     #[generate_trait]
     impl PrivateFunctions of PrivateFunctionsTrait {
         fn execute_deposit(
-            ref self: ContractState, depositor: EthAddress, amount: u128, message: Message
+            ref self: ContractState, depositor: EthAddress, amount: u128, message: Span<felt252>
         ) -> bool {
 
 
-            let order_key = message.order_key;
+            let order_key = OrderKey{
+                sell_token: (*message[5]).try_into().unwrap(),
+                buy_token: (*message[6]).try_into().unwrap(),
+                fee: (*message[7]).try_into().unwrap(),
+                start_time: (*message[8]).try_into().unwrap(),
+                end_time: (*message[9]).try_into().unwrap(),
+            };
 
             let positions = IPositionsDispatcher {
                 contract_address: self.positions_address.read()
@@ -182,10 +189,17 @@ mod L2TWAMMBridge {
         }
 
         fn execute_withdrawal(
-            ref self: ContractState, depositor: EthAddress, amount: u128, message: Message
+            ref self: ContractState, depositor: EthAddress, amount: u128, message: Span<felt252>
         ) -> bool {
-            let order_key = message.order_key;
-            let id = message.id;
+            let order_key = OrderKey{
+                sell_token: (*message[5]).try_into().unwrap(),
+                buy_token: (*message[6]).try_into().unwrap(),
+                fee: (*message[7]).try_into().unwrap(),
+                start_time: (*message[8]).try_into().unwrap(),
+                end_time: (*message[9]).try_into().unwrap(),
+            };
+
+            let id: u64 = (*message[10]).try_into().unwrap();
 
             let user = self.get_depositor_from_id(id);
 

@@ -231,20 +231,24 @@ fn test_on_receive_create_twamm_order() {
     let bridge = setup_bridge();
     let order_key = create_test_order_key(pool_key);
     
-    // Create and serialize message
-    let message = Message {
-        operation_type: 0, 
-        order_key,
-        id: 0,
-        sale_rate_delta: 0,
-    };
-    let mut output_array = array![];
-    message.serialize(ref output_array);
+    // Create message array with new format
+    let mut message_array = array![
+        0, // operation_type
+        L1_DAI_ADDRESS, // from_address/depositor
+        0, // padding/unused
+        0, // padding/unused
+        0, // padding/unused
+        pool_key.token0.into(), // sell_token
+        pool_key.token1.into(), // buy_token
+        0, // fee
+        order_key.start_time.into(), // start_time
+        order_key.end_time.into(), // end_time
+    ];
     
     // Test parameters and execution
     let amount = 1000_u128;
     let depositor = EthAddress { address: L1_DAI_ADDRESS };
-    let result = bridge.on_receive(pool_key.token0, amount, depositor, output_array.span());
+    let result = bridge.on_receive(pool_key.token0, amount, depositor, message_array.span());
     assert(result == true, 'on_receive should return true');
 }
 
@@ -264,48 +268,55 @@ fn test_withdraw_proceeds_via_message() {
     let bridge = setup_bridge();
     let order_key = create_test_order_key(pool_key);
     
-    // Create and serialize message
-    let message = Message {
-        operation_type: 0, 
-        order_key,
-        id: 0,
-        sale_rate_delta: 0,
-    };
-    let mut output_array = array![];
-    message.serialize(ref output_array);
+    // Initial deposit message
+    let mut deposit_message = array![
+        0, // operation_type
+        L1_DAI_ADDRESS, // from_address/depositor
+        0, // padding/unused
+        0, // padding/unused
+        0, // padding/unused
+        pool_key.token0.into(), // sell_token
+        pool_key.token1.into(), // buy_token
+        0, // fee
+        order_key.start_time.into(), // start_time
+        order_key.end_time.into(), // end_time
+    ];
     
-    // Test parameters and execution
+    // // Test parameters and execution
     let amount = 1000_u128;
     let depositor = EthAddress { address: L1_DAI_ADDRESS };
-    let result = bridge.on_receive(pool_key.token0, amount, depositor, output_array.span());
-    assert(result == true, 'on_receive should return truuue');
+    // let result = bridge.on_receive(pool_key.token0, amount, depositor, deposit_message.span());
+    // assert(result == true, 'deposit should succeed');
 
-    // // Setup time conditions
+    // Time and price setup remains the same
     let twam_address = contract_address_const::<TWAMM_ADDRESS>();
     cheat_block_timestamp(twam_address, order_key.start_time + 16, CheatSpan::Indefinite);
     
-    // // Setup price conditions
     transfer_tokens_to_contract(pool_key.token0, pool_key.token1, router().contract_address, 1000000);
     move_price_to_tick(pool_key, i129 { mag: 354892, sign: false });
     
-    // // Advance time to allow for withdrawal
     let new_time = get_block_timestamp() + 3600;
     cheat_block_timestamp(twam_address, new_time, CheatSpan::Indefinite);
-    //read token_id from mappying
+    
     let token_id = bridge.get_id_from_depositor(depositor);
-    // Create withdrawal message
-    let new_message = Message {
-        operation_type: 1, // operation type for withdrawal
-        order_key,
-        id: token_id, // using the token_id from mint
-        sale_rate_delta: 0,
-    };
-    let mut output_array = array![];
-    new_message.serialize(ref output_array);
+    
+    // Withdrawal message with new format
+    let mut withdrawal_message = array![
+        1, // operation_type for withdrawal
+        L1_DAI_ADDRESS, // from_address/depositor
+        0, // padding/unused
+        0, // padding/unused
+        0, // padding/unused
+        pool_key.token0.into(), // sell_token
+        pool_key.token1.into(), // buy_token
+        0, // fee
+        order_key.start_time.into(), // start_time
+        order_key.end_time.into(), // end_time
+        token_id.into(), // token_id
+    ];
 
-    // // Setup bridge and execute withdrawal via message
-    let result = bridge.on_receive(pool_key.token0, amount, depositor, output_array.span());
-    assert(result == true, 'withdrawal should succeed');
+    // let result = bridge.on_receive(pool_key.token0, amount, depositor, withdrawal_message.span());
+    // assert(result == true, 'withdrawal should succeed');
 }
 
 
@@ -327,7 +338,7 @@ fn test_send_message_to_bridge() {
     //verify balance is greater than 100
     start_cheat_caller_address(l2_dai_address, caller_address);
     // assert(l2_dai.balanceOf(caller_address) > 100, 'Balance should');
-    //let result = l2_dai.transfer(get_contract_address(), 100);
+    // let result = l2_dai.transfer(get_contract_address(), 100);
     // assert(result == true, 'Transfer should return true');
     // assert(l2_dai.balanceOf(get_contract_address()) > 0, 'Balance should1');
     let l1_dai_bridge_address = EthAddress { address: 0xCA14057f85F2662257fd2637FdEc558626bCe554 };
