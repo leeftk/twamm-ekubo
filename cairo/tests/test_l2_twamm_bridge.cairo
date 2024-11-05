@@ -278,7 +278,7 @@ fn test_withdraw_proceeds_via_message() {
     let amount = 1000_u128;
     let depositor = EthAddress { address: L1_DAI_ADDRESS };
     let result = bridge.on_receive(pool_key.token0, amount, depositor, output_array.span());
-    assert(result == true, 'on_receive should return true');
+    assert(result == true, 'on_receive should return truuue');
 
     // // Setup time conditions
     let twam_address = contract_address_const::<TWAMM_ADDRESS>();
@@ -292,7 +292,7 @@ fn test_withdraw_proceeds_via_message() {
     let new_time = get_block_timestamp() + 3600;
     cheat_block_timestamp(twam_address, new_time, CheatSpan::Indefinite);
     //read token_id from mappying
-    let token_id = bridge.get_token_id_by_depositor(depositor);
+    let token_id = bridge.get_id_from_depositor(depositor);
     // Create withdrawal message
     let new_message = Message {
         operation_type: 1, // operation type for withdrawal

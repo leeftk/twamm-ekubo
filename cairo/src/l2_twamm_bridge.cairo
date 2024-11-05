@@ -1,4 +1,4 @@
-use starknet::{ContractAddress, get_contract_address, contract_address_const};
+use starknet::{ContractAddress, get_contract_address, contract_address_const, get_caller_address};
 use starknet::storage::{
     Map, StoragePointerWriteAccess, StorageMapReadAccess, StoragePointerReadAccess, StoragePath,
     StoragePathEntry, StorageMapWriteAccess
@@ -13,17 +13,14 @@ use starknet::EthAddress;
 #[starknet::interface]
 pub trait ITokenBridge<TContractState> {
     fn initiate_token_withdraw(
-        ref self: TContractState,
-        l1_token: EthAddress,
-        l1_recipient: EthAddress,
-        amount: u256
+        ref self: TContractState, l1_token: EthAddress, l1_recipient: EthAddress, amount: u256
     );
     fn handle_deposit(
-    ref self: TContractState, 
-    from_address: felt252, 
-    l2_recipient: ContractAddress, 
-    amount: u256,
-);
+        ref self: TContractState,
+        from_address: felt252,
+        l2_recipient: ContractAddress,
+        amount: u256,
+    );
 }
 
 #[starknet::interface]
@@ -40,8 +37,13 @@ pub trait IL2TWAMMBridge<TContractState> {
         ref self: TContractState, id: u64, order_key: OrderKey
     ) -> u128;
     fn set_token_bridge_address(ref self: TContractState, address: ContractAddress);
+    fn get_depositor_from_id(ref self: TContractState, id: u64) -> EthAddress;
     fn get_token_id_by_depositor(ref self: TContractState, depositor: EthAddress) -> u64;
-    
+    fn get_l2_bridge_by_l2_token(
+        ref self: TContractState, buy_token: ContractAddress
+    ) -> ContractAddress;
+    fn get_l1_token_by_l2_token(ref self: TContractState, l2_token: ContractAddress) -> EthAddress;
+    fn get_id_from_depositor(ref self: TContractState, depositor: EthAddress) -> u64;
 }
 
 #[starknet::contract]
@@ -49,9 +51,19 @@ mod L2TWAMMBridge {
     use ekubo::interfaces::positions::{IPositionsDispatcher, IPositionsDispatcherTrait};
     use ekubo::extensions::interfaces::twamm::{OrderKey};
     use starknet::{ContractAddress, get_contract_address};
-    use starknet::storage::Map;
+    use super::{Map, StoragePointerWriteAccess, StorageMapReadAccess, StoragePointerReadAccess, StoragePath,
+        StoragePathEntry, StorageMapWriteAccess};
     use super::{ITokenBridge, ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait};
     use super::EthAddress;
+    use super::{get_caller_address};
+    use core::array::ArrayTrait;
+
+    const ERROR_NO_TOKENS_MINTED: felt252 = 'No tokens minted';
+    const ERROR_NO_TOKENS_SOLD: felt252 = 'No tokens sold';
+    const ERROR_NOT_ORDER_OWNER: felt252 = 'Not order owner';
+    const ERROR_INVALID_ADDRESS: felt252 = 'Invalid address';
+    const ERROR_UNAUTHORIZED: felt252 = 'Unauthorized';
+    const ERROR_ZERO_AMOUNT: felt252 = 'Amount cannot be zero';
 
     #[storage]
     struct Storage {
@@ -60,6 +72,12 @@ mod L2TWAMMBridge {
         token_bridge_address: ContractAddress,
         order_id_to_depositor: Map::<u64, EthAddress>,
         order_depositor_to_id: Map::<EthAddress, u64>,
+        l2_bridge_to_l2_token: Map::<ContractAddress, ContractAddress>,
+        l2_token_to_l1_token: Map::<ContractAddress, EthAddress>,
+        contract_owner: ContractAddress,
+        token_id_to_depositor: Map<u64, EthAddress>,
+        depositor_ids: Map<EthAddress, Array<u64>>,
+
     }
 
     #[derive(Drop, Serde)]
@@ -68,6 +86,11 @@ mod L2TWAMMBridge {
         order_key: OrderKey,
         id: u64,
         sale_rate_delta: u128,
+    }
+
+    #[constructor]
+    fn constructor(ref self: ContractState) {
+        self.contract_owner.write(get_caller_address());
     }
 
     #[external(v0)]
@@ -79,9 +102,9 @@ mod L2TWAMMBridge {
             amount: u128,
             depositor: EthAddress,
             message: Span<felt252>
-        ) -> bool {     
+        ) -> bool {
             let mut message_span = message;
-            
+
             match Serde::<Message>::deserialize(ref message_span) {
                 Option::Some(message) => {
                     match message.operation_type {
@@ -94,80 +117,99 @@ mod L2TWAMMBridge {
         }
 
         fn withdraw_proceeds_from_sale_to_self(
-            ref self: ContractState, 
-            id: u64, 
-            order_key: OrderKey
+            ref self: ContractState, id: u64, order_key: OrderKey
         ) -> u128 {
-            let positions = IPositionsDispatcher { contract_address: self.positions_address.read() };
+            let positions = IPositionsDispatcher {
+                contract_address: self.positions_address.read()
+            };
             positions.withdraw_proceeds_from_sale_to_self(id, order_key)
-           
         }
 
         fn set_token_bridge_address(ref self: ContractState, address: ContractAddress) {
+            self.assert_only_owner();
             self.token_bridge_address.write(address);
         }
 
         fn set_positions_address(ref self: ContractState, address: ContractAddress) {
+            self.assert_only_owner();
             self.positions_address.write(address);
         }
-        fn get_token_id_by_depositor(ref self: ContractState, depositor: EthAddress) -> u64 {
+        
+        fn get_depositor_from_id(ref self: ContractState, id: u64) -> EthAddress {
+            self.order_id_to_depositor.read(id)
+        }
+        fn get_id_from_depositor(ref self: ContractState, depositor: EthAddress) -> u64 {
             self.order_depositor_to_id.read(depositor)
         }
 
+        fn get_l2_bridge_by_l2_token(
+            ref self: ContractState, buy_token: ContractAddress
+        ) -> ContractAddress {
+            self.assert_only_owner();
+            self.l2_bridge_to_l2_token.read(buy_token)
+        }
+        fn get_token_id_by_depositor(ref self: ContractState, depositor: EthAddress) -> u64 {
+            self.order_depositor_to_id.read(depositor)
+        }   
+
+        fn get_l1_token_by_l2_token(
+            ref self: ContractState, l2_token: ContractAddress
+        ) -> EthAddress {
+            self.assert_only_owner();
+            self.l2_token_to_l1_token.read(l2_token)
+        }
     }
-
-
-
-
-
     #[generate_trait]
     impl PrivateFunctions of PrivateFunctionsTrait {
         fn execute_deposit(
-            ref self: ContractState,
-            depositor: EthAddress,
-            amount: u128,
-            message: Message
+            ref self: ContractState, depositor: EthAddress, amount: u128, message: Message
         ) -> bool {
+
+
             let order_key = message.order_key;
-            
-            let positions = IPositionsDispatcher { contract_address: self.positions_address.read() };
+
+            let positions = IPositionsDispatcher {
+                contract_address: self.positions_address.read()
+            };
+
             let (id, minted) = positions.mint_and_increase_sell_amount(order_key, amount);
-            assert(minted != 0, 'No tokens minted');
-            assert(amount != 0, 'No tokens sold');
-            
-            self.order_id_to_depositor.write(id, depositor);
+            assert(minted != 0, ERROR_NO_TOKENS_MINTED);
+            assert(id != 0, ERROR_ZERO_AMOUNT);
             self.order_depositor_to_id.write(depositor, id);
             
-            self.sender_to_amount.write(depositor, amount);
+            self.order_id_to_depositor.write(id, depositor);
             true
         }
 
         fn execute_withdrawal(
-            ref self: ContractState,
-            depositor: EthAddress,
-            amount: u128,
-            message: Message
+            ref self: ContractState, depositor: EthAddress, amount: u128, message: Message
         ) -> bool {
             let order_key = message.order_key;
             let id = message.id;
-            
-            let owner = self.order_id_to_depositor.read(id);
-            assert(owner == depositor, 'Not order owner');
-            
-            let positions = IPositionsDispatcher { contract_address: self.positions_address.read() };
-            let amount_sold = positions.withdraw_proceeds_from_sale_to_self(id, order_key);
-            assert(amount_sold != 0, 'No tokens sold');
-            
-            self.sender_to_amount.write(depositor, amount - amount_sold);
-            
-            // let token_bridge = ITokenBridgeDispatcher { 
-            //     contract_address: self.token_bridge_address.read()
-            // };      
 
-            // let l1_token = EthAddress { address: 0x6B175474E89094C44Da98b954EedeAC495271d0F };    
-            // let u256_amount_sold = u256 { low: amount_sold, high: 0 };          
-            // token_bridge.initiate_token_withdraw(l1_token, depositor, u256_amount_sold);
+            let user = self.get_depositor_from_id(id);
+
+            assert(user == depositor, ERROR_ZERO_AMOUNT);
+
+            let positions = IPositionsDispatcher {
+                contract_address: self.positions_address.read()
+            };
+            let amount_sold = positions.withdraw_proceeds_from_sale_to_self(id, order_key);
+            assert(amount_sold != 0, ERROR_NO_TOKENS_SOLD);
+            let new_amount = amount - amount_sold;
+            self.sender_to_amount.write(depositor, new_amount);
+            let bridge_address = self.get_l2_bridge_by_l2_token(order_key.buy_token);
+
+            let token_bridge = ITokenBridgeDispatcher { contract_address: bridge_address };
+            let l1_token = self.get_l1_token_by_l2_token(order_key.buy_token);
+
+            // token_bridge.initiate_token_withdraw(l1_token, depositor, amount_sold);
             true
+        }
+        fn assert_only_owner(ref self: ContractState) {
+            let caller = get_caller_address();
+            let owner = self.contract_owner.read();
+            assert(caller == owner, ERROR_UNAUTHORIZED);
         }
     }
 }
