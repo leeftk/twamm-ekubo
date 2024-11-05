@@ -191,10 +191,7 @@ mod L2TWAMMBridge {
 
             assert(user == depositor, ERROR_ZERO_AMOUNT);
 
-            let positions = IPositionsDispatcher {
-                contract_address: self.positions_address.read()
-            };
-            let amount_sold = positions.withdraw_proceeds_from_sale_to_self(id, order_key);
+            let amount_sold = self.withdraw_proceeds_from_sale_to_self(id, order_key);
             assert(amount_sold != 0, ERROR_NO_TOKENS_SOLD);
             let new_amount = amount - amount_sold;
             self.sender_to_amount.write(depositor, new_amount);
