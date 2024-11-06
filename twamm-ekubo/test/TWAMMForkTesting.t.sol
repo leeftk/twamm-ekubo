@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import "../src/L1TWAMMBridge.sol";
 import "./mocks/MockERC20.sol";
 import "./mocks/MockStarknetTokenBridge.sol";
+import { OrderParams } from "../src/types/OrderParams.sol";
 
 contract L1TWAMMBridgeTest is Test {
     L1TWAMMBridge public bridge;
@@ -167,14 +168,18 @@ contract L1TWAMMBridgeTest is Test {
         token.approve(address(bridge), amount);
 
         vm.expectRevert();
-        bridge.depositAndCreateOrder(
-            amount,
-            l2EndpointAddress,
-            end, // Swapped start and end to create invalid time range
+        OrderParams memory order = OrderParams(
+            msg.sender,
+            address(token),
+            address(token),
+            fee,
             start,
-            address(token),
-            address(token),
-            fee
+            start + 64,
+            amount,
+            l2EndpointAddress
+        );
+        bridge.depositAndCreateOrder(
+          order
         );
         vm.stopPrank();
     }

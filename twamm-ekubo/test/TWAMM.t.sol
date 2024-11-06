@@ -8,29 +8,37 @@ import "./mocks/MockStarknetTokenBridge.sol";
 import "forge-std/console2.sol";
 
 contract L1TWAMMBridgeTest is Test {
+    // === CONSTANTS ===
+    uint128 constant DEFAULT_AMOUNT = 100 ether;
+    uint128 constant INITIAL_USER_BALANCE = 1000 ether;
+    uint128 constant DEFAULT_DURATION = 64;
+    uint128 constant DEFAULT_FEE = 0.01 ether;
+
+    // === STATE VARIABLES ===
     L1TWAMMBridge public bridge;
     MockERC20 public token;
     MockStarknetTokenBridge public starknetBridge;
 
-    event DepositAndCreateOrder(address indexed l1Sender, uint256 indexed l2Recipient, uint256 amount, uint256 nonce);
-
+    // === TEST ADDRESSES ===
     address public user = address(0x1);
     address public l2BridgeAddress = address(456);
     address public l2TokenAddress = address(789);
     address public l2EkuboAddress = address(1);
     uint256 public l2EndpointAddress = uint256(uint160(address(131415)));
 
-    //end - start should % 16 = 0
-
-    // Ensure timestamps are aligned with the required step sizes
+    // === TIME RELATED VARIABLES ===
     uint128 public currentTimestamp = uint128(block.timestamp);
     uint128 public difference = 16 - (currentTimestamp % 16);
     uint128 public start = currentTimestamp + difference;
-    // Let's test with MASSIVE intervals
-    uint128 public end = start + 64; // 16 * 1048576 = 16777216      (~4.5 hours)
+    uint128 public end = start + DEFAULT_DURATION;
 
-    uint128 public fee = 0.01 ether;
-
+    // === EVENTS ===
+    event DepositAndCreateOrder(
+        address indexed l1Sender, 
+        uint256 indexed l2Recipient, 
+        uint256 amount, 
+        uint256 nonce
+    );
     event DepositWithMessage(
         address indexed sender,
         address indexed token,
@@ -40,9 +48,23 @@ contract L1TWAMMBridgeTest is Test {
         uint256 nonce,
         uint256 fee
     );
-
     event WithdrawalInitiated(address indexed l1Recipient, uint256 amount);
 
+    // === HELPERS ===
+    function _createDefaultOrder() internal view returns (OrderParams memory) {
+        return OrderParams(
+            msg.sender,
+            address(token),
+            address(token),
+            DEFAULT_FEE,
+            start,
+            start + DEFAULT_DURATION,
+            DEFAULT_AMOUNT,
+            l2EndpointAddress
+        );
+    }
+
+    // === SETUP ===
     function setUp() public {
         token = new MockERC20("Mock Token", "MTK");
         starknetBridge = new MockStarknetTokenBridge();
@@ -56,100 +78,74 @@ contract L1TWAMMBridgeTest is Test {
             address(0x1268cc171c54F2000402DfF20E93E60DF4c96812)
         );
 
-        token.mint(user, 1000 ether);
+        token.mint(user, INITIAL_USER_BALANCE);
         starknetBridge.setServicingToken(address(token), true);
-        vm.deal(user, 1000 ether);
+        vm.deal(user, INITIAL_USER_BALANCE);
 
         vm.mockCall(
-            address(0x1268cc171c54F2000402DfF20E93E60DF4c96812), // starknetTokenBridge address
+            address(0x1268cc171c54F2000402DfF20E93E60DF4c96812),
             abi.encodeWithSelector(IStarknetRegistry.getBridge.selector, address(token)),
             abi.encode(address(starknetBridge))
         );
     }
 
+    // === DEPOSIT TESTS ===
     function testDepositWithMessage() public {
-        uint128 amount = 100 ether;
-
-        // Mock the registry response BEFORE making the deposit
-        vm.mockCall(
-            address(0x1268cc171c54F2000402DfF20E93E60DF4c96812), // starknetRegistry address
-            abi.encodeWithSelector(IStarknetRegistry.getBridge.selector, address(token)),
-            abi.encode(address(starknetBridge))
-        );
-
         vm.startPrank(user);
-        token.approve(address(bridge), amount);
+        token.approve(address(bridge), DEFAULT_AMOUNT);
 
         uint256 expectedNonce = starknetBridge.mockNonce();
 
         vm.expectEmit(true, true, false, true);
-        emit DepositAndCreateOrder(address(user), l2EndpointAddress, amount, expectedNonce);
-
-        bridge.depositAndCreateOrder{value: 0.01 ether}(
-            amount, l2EndpointAddress, start, start + 64, address(token), address(token), fee
-        );
+        emit DepositAndCreateOrder(address(user), l2EndpointAddress, DEFAULT_AMOUNT, expectedNonce);
+        
+        OrderParams memory order = _createDefaultOrder();
+        bridge.depositAndCreateOrder{value: DEFAULT_FEE}(order);
         vm.stopPrank();
 
         MockStarknetTokenBridge.DepositParams memory params = starknetBridge.getLastDepositParams();
-
-        console.log("Expected Ekubo address:", uint256(uint160(l2EkuboAddress)));
-        console.log("Actual message[0]:", params.message[0]);
-
-        // Assertions remain the same
         assertEq(params.token, address(token), "Incorrect token");
-        assertEq(params.amount, amount, "Incorrect amount");
+        assertEq(params.amount, DEFAULT_AMOUNT, "Incorrect amount");
         assertEq(params.message.length, 7, "Incorrect payload length");
-        // assertEq(params.message[0], uint256(uint160(l2EkuboAddress)), "Incorrect Ekubo address");
         assertEq(params.l2EndpointAddress, l2EndpointAddress, "Incorrect sender address");
     }
 
+    // === WITHDRAWAL TESTS ===
     function testInitiateWithdrawal() public {
-        uint128 amount = 100 ether;
         address l1Recipient = address(0x3);
-        uint64 id = 1;
-        uint128 saleRateDelta = 50 ether;
-
-        uint256 testEnd = start + 64;
 
         vm.startPrank(user);
-        token.approve(address(bridge), amount);
-        bridge.depositAndCreateOrder{value: 0.01 ether}(
-            amount, l2EndpointAddress, start, start + 64, address(token), address(token), fee
-        );
+        token.approve(address(bridge), DEFAULT_AMOUNT);
+        OrderParams memory order = _createDefaultOrder();
+        bridge.depositAndCreateOrder{value: DEFAULT_FEE}(order);
         vm.stopPrank();
 
         vm.expectEmit(true, false, false, true);
-        emit WithdrawalInitiated(l1Recipient, amount);
+        emit WithdrawalInitiated(l1Recipient, DEFAULT_AMOUNT);
 
         vm.prank(bridge.owner());
-        bridge.initiateWithdrawal{value: 0.01 ether}(address(token), l1Recipient, amount);
+        bridge.initiateWithdrawal{value: DEFAULT_FEE}(
+            address(token), 
+            l1Recipient, 
+            DEFAULT_AMOUNT
+        );
     }
 
     function testInitiateWithdrawalUnauthorized() public {
-        uint128 amount = 100 ether;
         address l1Recipient = address(0x3);
 
         vm.expectRevert();
         vm.prank(user);
-        bridge.initiateWithdrawal(address(token), l1Recipient, amount);
+        bridge.initiateWithdrawal(address(token), l1Recipient, DEFAULT_AMOUNT);
     }
 
     function testInvalidTimeRange() public {
-        uint128 amount = 100 ether;
-
         vm.startPrank(user);
-        token.approve(address(bridge), amount);
+        token.approve(address(bridge), DEFAULT_AMOUNT);
 
+        OrderParams memory order = _createDefaultOrder();
         vm.expectRevert(L1TWAMMBridge.InvalidTimeRange.selector);
-        bridge.depositAndCreateOrder(
-            amount,
-            l2EndpointAddress,
-            end, // Swapped start and end to create invalid time range
-            start,
-            address(token),
-            address(token),
-            fee
-        );
+        bridge.depositAndCreateOrder(order);
         vm.stopPrank();
     }
 
@@ -168,30 +164,21 @@ contract L1TWAMMBridgeTest is Test {
     }
 
     function testValidBridge() public {
-        uint128 amount = 100 ether;
-
-        vm.mockCall(
-            address(0x1268cc171c54F2000402DfF20E93E60DF4c96812),
-            abi.encodeWithSelector(IStarknetRegistry.getBridge.selector, address(token)),
-            abi.encode(address(starknetBridge))
-        );
-
         vm.startPrank(user);
-        token.approve(address(bridge), amount);
+        token.approve(address(bridge), DEFAULT_AMOUNT);
 
         uint256 expectedNonce = starknetBridge.mockNonce();
 
         vm.expectEmit(true, true, false, true);
         emit DepositAndCreateOrder(
-            user, // l1Sender
-            l2EndpointAddress, // l2Recipient
-            amount, // amount
-            expectedNonce // nonce
+            user,
+            l2EndpointAddress,
+            DEFAULT_AMOUNT,
+            expectedNonce
         );
 
-        bridge.depositAndCreateOrder{value: 0.01 ether}(
-            amount, l2EndpointAddress, start, start + 64, address(token), address(token), fee
-        );
+        OrderParams memory order = _createDefaultOrder();
+        bridge.depositAndCreateOrder{value: DEFAULT_FEE}(order);
         vm.stopPrank();
 
         MockStarknetTokenBridge.DepositParams memory params = starknetBridge.getLastDepositParams();
@@ -207,22 +194,20 @@ contract L1TWAMMBridgeTest is Test {
     }
 
     function testTimeValidation() public {
-        // Let's test various intervals and print results
         uint256[] memory intervals = new uint256[](6);
-        intervals[0] = 16; // Basic interval
-        intervals[1] = 256; // 16 * 16
-        intervals[2] = 4096; // 16 * 256
-        intervals[3] = 65536; // 16 * 4096
-        intervals[4] = 1048576; // 16 * 65536
-        intervals[5] = 16777216; // 16 * 1048576
+        intervals[0] = 16;
+        intervals[1] = 256;
+        intervals[2] = 4096;
+        intervals[3] = 65536;
+        intervals[4] = 1048576;
+        intervals[5] = 16777216;
 
         vm.warp(start);
 
         for (uint256 i = 0; i < intervals.length; i++) {
             uint256 targetTime = start + intervals[i];
-            // Round target time to the nearest valid interval based on distance
             uint256 distance = intervals[i];
-            uint256 logScale = 4; // log base 2 of 16
+            uint256 logScale = 4;
             uint256 msb = mostSignificantBit(distance);
             uint256 step;
 
@@ -230,26 +215,15 @@ contract L1TWAMMBridgeTest is Test {
                 step = 16;
             } else {
                 uint256 power = (msb / logScale) * logScale;
-                step = 1 << power; // 2^power
+                step = 1 << power;
             }
 
             uint256 roundedTime = (targetTime / step) * step;
-
             bool isValid = bridge.isTimeValidExternal(start, roundedTime);
-            
-            // console.log(
-            //     "Testing interval:",
-            //     intervals[i],
-            //     "Step size:",
-            //     step,
-            //     "Valid:",
-            //     isValid
-            // );
             assertTrue(isValid, "Time should be valid after rounding");
         }
     }
 
-    // Helper function to find most significant bit
     function mostSignificantBit(uint256 x) internal pure returns (uint256) {
         uint256 r = 0;
         while (x > 0) {

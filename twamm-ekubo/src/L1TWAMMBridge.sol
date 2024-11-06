@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { OrderParams } from "./types/OrderParams.sol";
 
 interface IStarknetTokenBridge {
     function depositWithMessage(address token, uint256 amount, uint256 l2Recipient, uint256[] calldata message)
@@ -56,17 +57,7 @@ contract L1TWAMMBridge is Ownable {
     error InvalidTime();
     error NotSupportedToken();
 
-    /// @dev Helper struct for order parameters and payload encoding
-    struct OrderParams {
-        address sender;
-        address sellToken;
-        address buyToken;
-        uint128 fee;
-        uint128 start;
-        uint128 end;
-        uint128 amount;
-        uint256 l2EndpointAddress;
-    }
+   
 
     constructor(
         address _token,
@@ -97,35 +88,18 @@ contract L1TWAMMBridge is Ownable {
     }
 
     function depositAndCreateOrder(
-        uint128 amount,
-        uint256 l2EndpointAddress,
-        uint128 start,
-        uint128 end,
-        address sellToken,
-        address buyToken,
-        uint128 fee
+        OrderParams memory params
     ) external payable {
-        if (!validateBridge(address(token))) revert InvalidBridge();
+        //if (!validateBridge(address(token))) revert InvalidBridge();
 
-        _validateTimeParams(start, end);
-        _handleTokenTransfer(amount, address(token), address(starknetBridge));
-
-        OrderParams memory params = OrderParams({
-            sender: msg.sender,
-            sellToken: sellToken,
-            buyToken: buyToken,
-            fee: fee,
-            start: start,
-            end: end,
-            amount: amount,
-            l2EndpointAddress: l2EndpointAddress
-        });
+        _validateTimeParams(params.start, params.end);
+        _handleTokenTransfer(params.amount, address(token), address(starknetBridge));
 
         uint256[] memory payload = _encodeDepositPayload(params);
 
-        starknetBridge.depositWithMessage{value: msg.value}(address(token), amount, l2EndpointAddress, payload);
+        starknetBridge.depositWithMessage{value: msg.value}(address(token), params.amount, l2EndpointAddress, payload);
 
-        emit DepositAndCreateOrder(msg.sender, l2EndpointAddress, amount, DEFAULT_NONCE);
+        emit DepositAndCreateOrder(msg.sender, l2EndpointAddress, params.amount, DEFAULT_NONCE);
     }
 
     function initiateWithdrawal(address sellToken, address l1Recipient, uint128 amount) external payable onlyOwner {
