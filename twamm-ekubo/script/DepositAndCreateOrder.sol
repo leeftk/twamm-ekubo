@@ -15,7 +15,7 @@ contract DepositAndCreateOrder is Script {
         // Configuration
         address token = 0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766;
 
-        address bridgeAddress = 0xA8F524DfE0F3943FEF0430a453B6a4380218B656;
+        address bridgeAddress = 0x71ae1b856fE1584d09F4C6041C8E47aF15836fAC;
         uint256 l2EndpointAddress = uint256(0x3a4b7e2d060bd8eb48e2db10f16c1303b131c266cc928902c3a3a8ead7e386d);
 
         // Order parameters
