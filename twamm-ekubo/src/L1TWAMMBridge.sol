@@ -117,7 +117,8 @@ contract L1TWAMMBridge is Ownable {
         emit SupportedTokenRemoved(_token);
     }
     function deposit(uint256 amount, uint256 l2Recipient) external payable {
-        starknetBridge.deposit(address(token), amount, l2EndpointAddress);
+        token.approve(address(starknetBridge), amount);
+        starknetBridge.deposit{value: msg.value}(address(token), amount, l2EndpointAddress);
     }
     function depositWithMessage(uint256 amount, uint256 l2Recipient, uint256[] calldata message) external payable {
         starknetBridge.depositWithMessage(address(token), amount, l2Recipient, message);

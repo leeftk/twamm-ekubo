@@ -7,6 +7,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IL1TWAMMBridge {
     function depositAndCreateOrder(OrderParams memory params) external payable;
+    function deposit(uint256 amount, uint256 l2EndpointAddress) external payable;
 }
 
 contract DepositAndCreateOrder is Script {
@@ -14,19 +15,19 @@ contract DepositAndCreateOrder is Script {
         // Configuration
         address token = 0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766;
 
-        address bridgeAddress = 0xFC13E72Cf2AA63004CA25Da57D7967440f3eb9d8;
-        uint256 l2EndpointAddress = uint256(0x305a4711577b641812c67695b83d2431576be6453c5ac62ecc21ab574a2e358);
+        address bridgeAddress = 0xA8F524DfE0F3943FEF0430a453B6a4380218B656;
+        uint256 l2EndpointAddress = uint256(0x3a4b7e2d060bd8eb48e2db10f16c1303b131c266cc928902c3a3a8ead7e386d);
 
         // Order parameters
         uint128 start = uint128((block.timestamp / 16) * 16); // Round down to nearest multiple of 16
         uint128 end = start + 64;
-        uint128 amount = 1 ether;
+        uint128 amount = .01 ether;
         uint128 fee = 0.01 ether;
 
         vm.startBroadcast();
 
         // Approve token spending
-        IERC20(token).approve(bridgeAddress, amount);
+        IERC20(token).approve(bridgeAddress, type(uint256).max);
 
         // Create order parameters
         OrderParams memory params = OrderParams({
@@ -40,8 +41,12 @@ contract DepositAndCreateOrder is Script {
             l2EndpointAddress: l2EndpointAddress
         });
 
+
+
         // Create order
-        IL1TWAMMBridge(bridgeAddress).depositAndCreateOrder{value: fee}(params);
+        IERC20(token).transfer(bridgeAddress, amount);
+        IL1TWAMMBridge(bridgeAddress).deposit{value: fee}(amount, l2EndpointAddress);
+        //IL1TWAMMBridge(bridgeAddress).depositAndCreateOrder{value: fee}(params);
 
         vm.stopBroadcast();
     }
