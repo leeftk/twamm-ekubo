@@ -28,7 +28,7 @@ pub trait IL2TWAMMBridge<TContractState> {
     fn on_receive(
         ref self: TContractState,
         l2_token: ContractAddress,
-        amount: u128,
+        amount: u256,
         depositor: EthAddress,
         message: Span<felt252>
     ) -> bool;
@@ -87,6 +87,20 @@ mod L2TWAMMBridge {
         id: u64,
         sale_rate_delta: u128,
     }
+    //Added event for testing
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        MessageReceived: MessageReceived,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct MessageReceived {
+        l2_token: ContractAddress,
+        amount: u256,
+        depositor: EthAddress,
+        message: Span<felt252>
+    }
 
     #[constructor]
     fn constructor(ref self: ContractState) {
@@ -99,21 +113,24 @@ mod L2TWAMMBridge {
         fn on_receive(
             ref self: ContractState,
             l2_token: ContractAddress,
-            amount: u128,
+            amount: u256,
             depositor: EthAddress,
             message: Span<felt252>
         ) -> bool {
+            self.emit(MessageReceived { l2_token, amount, depositor, message });
             let mut message_span = message;
             let first_element = *message[0];
             let from_address: EthAddress = (*message[1]).try_into().unwrap(); 
             
-            if first_element == 0 {     
-                // Create order or execute deposit with these parameters
-                self.execute_deposit(from_address, amount, message)
-            } else {
-                // Handle withdrawal case
-                self.execute_withdrawal(from_address, amount, message)
-            }
+            // if first_element == 0 {     
+            //     // Create order or execute deposit with these parameters
+            //     self.execute_deposit(from_address, amount.try_into().unwrap(), message)
+            // } else {
+            //     // Handle withdrawal case
+            //     self.execute_withdrawal(from_address, amount.try_into().unwrap(), message)
+            // }
+
+            true
            
         }
 

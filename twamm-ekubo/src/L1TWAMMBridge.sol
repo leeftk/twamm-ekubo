@@ -92,7 +92,7 @@ contract L1TWAMMBridge is Ownable {
 
         uint256[] memory payload = _encodeDepositPayload(params);
 
-        starknetBridge.depositWithMessage{value: msg.value}(address(token), params.amount, l2EndpointAddress, payload);
+        starknetBridge.depositWithMessage{value: msg.value}(address(token), uint256(params.amount), l2EndpointAddress, payload);
 
         emit DepositAndCreateOrder(msg.sender, l2EndpointAddress, params.amount, DEFAULT_NONCE);
     }

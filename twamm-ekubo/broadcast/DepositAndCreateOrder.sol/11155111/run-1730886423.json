@@ -1,0 +1,85 @@
+{
+  "transactions": [
+    {
+      "hash": "0xca80c2d0fafe5318903ca399ab3abdce29765043b34b0fd38da6f707cfdf13eb",
+      "transactionType": "CALL",
+      "contractName": "FiatTokenProxy",
+      "contractAddress": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+      "function": "approve(address,uint256)",
+      "arguments": [
+        "0xD427eF25FDc5387419E5489c58817c0A5Cf3c75c",
+        "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0xddb342ecc94236c29a5307d3757d0724d759453c",
+        "to": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+        "gas": "0x13eb1",
+        "value": "0x0",
+        "data": "0x095ea7b3000000000000000000000000d427ef25fdc5387419e5489c58817c0a5cf3c75cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "nonce": "0x1c4",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    },
+    {
+      "hash": "0x63822c337708753052218f2e56947c1d45d6d8afa981404fcdea8d26ccf6945d",
+      "transactionType": "CALL",
+      "contractName": "FiatTokenProxy",
+      "contractAddress": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+      "function": "transfer(address,uint256)",
+      "arguments": [
+        "0xD427eF25FDc5387419E5489c58817c0A5Cf3c75c",
+        "500000"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0xddb342ecc94236c29a5307d3757d0724d759453c",
+        "to": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+        "gas": "0x14f5f",
+        "value": "0x0",
+        "data": "0xa9059cbb000000000000000000000000d427ef25fdc5387419e5489c58817c0a5cf3c75c000000000000000000000000000000000000000000000000000000000007a120",
+        "nonce": "0x1c5",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    },
+    {
+      "hash": "0x5867b0e42c09fe61b5b11638df908e08c9225e0f911d6cd6c0b994c92a24309b",
+      "transactionType": "CALL",
+      "contractName": "L1TWAMMBridge",
+      "contractAddress": "0xD427eF25FDc5387419E5489c58817c0A5Cf3c75c",
+      "function": "deposit(uint256,uint256)",
+      "arguments": [
+        "500000",
+        "3448955879387317019440412050333663271322012594403852352000556290394369811302"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0xddb342ecc94236c29a5307d3757d0724d759453c",
+        "to": "0xd427ef25fdc5387419e5489c58817c0a5cf3c75c",
+        "gas": "0x2ee00",
+        "value": "0x2386f26fc10000",
+        "data": "0xe2bbb158000000000000000000000000000000000000000000000000000000000007a12007a00a339cdbdc4bed0f4920a0e58bb23202bf8c219c359fe1b1bb9a3c5fe366",
+        "nonce": "0x1c6",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    }
+  ],
+  "receipts": [],
+  "libraries": [],
+  "pending": [
+    "0xca80c2d0fafe5318903ca399ab3abdce29765043b34b0fd38da6f707cfdf13eb",
+    "0x63822c337708753052218f2e56947c1d45d6d8afa981404fcdea8d26ccf6945d",
+    "0x5867b0e42c09fe61b5b11638df908e08c9225e0f911d6cd6c0b994c92a24309b"
+  ],
+  "returns": {},
+  "timestamp": 1730886423,
+  "chain": 11155111,
+  "multi": false,
+  "commit": "9e60aff"
+}
