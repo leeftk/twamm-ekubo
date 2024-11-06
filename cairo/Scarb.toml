@@ -6,6 +6,12 @@ version = "0.1.0"
 ekubo = { git = "https://github.com/ekuboprotocol/abis" }
 starknet = ">=2.3.0"
 
+[cairo]
+sierra-replace-ids = true
+
+[starknet-artifacts]
+sierra = true
+casm = true
 
 [[tool.snforge.fork]]
 name = "mainnet"

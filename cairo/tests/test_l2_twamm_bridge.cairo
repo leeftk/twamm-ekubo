@@ -262,7 +262,7 @@ fn test_on_receive_create_twamm_order() {
     let (pool_key, bridge, order_key) = setup_test_environment();
     
     let message = create_twamm_message(0, pool_key, order_key, Option::None);
-    let amount = 1000_u128;
+    let amount = 1000_u256;
     let depositor = EthAddress { address: L1_DAI_ADDRESS };
     
     let result = bridge.on_receive(pool_key.token0, amount, depositor, message.span());
@@ -276,7 +276,7 @@ fn test_withdraw_proceeds_via_message() {
     
     // Initial deposit
     let deposit_message = create_twamm_message(0, pool_key, order_key, Option::None);
-    let amount = 1000_u128;
+    let amount = 1000_u256;
     let depositor = EthAddress { address: L1_DAI_ADDRESS };
     let result = bridge.on_receive(pool_key.token0, amount, depositor, deposit_message.span());
     assert(result == true, 'deposit should succeed');
