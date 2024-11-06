@@ -4,13 +4,12 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { OrderParams } from "./types/OrderParams.sol";
+import {OrderParams} from "./types/OrderParams.sol";
 
 interface IStarknetTokenBridge {
     function depositWithMessage(address token, uint256 amount, uint256 l2Recipient, uint256[] calldata message)
         external
-        payable
-        returns (uint256);
+        payable;
 
     function deposit(address token, uint256 amount, uint256 l2Recipient) external payable;
 
@@ -57,8 +56,6 @@ contract L1TWAMMBridge is Ownable {
     error InvalidTime();
     error NotSupportedToken();
 
-   
-
     constructor(
         address _token,
         address _starknetBridge,
@@ -87,9 +84,7 @@ contract L1TWAMMBridge is Ownable {
         return bridge != address(0);
     }
 
-    function depositAndCreateOrder(
-        OrderParams memory params
-    ) external payable {
+    function depositAndCreateOrder(OrderParams memory params) external payable {
         //if (!validateBridge(address(token))) revert InvalidBridge();
 
         _validateTimeParams(params.start, params.end);
@@ -116,10 +111,12 @@ contract L1TWAMMBridge is Ownable {
         supportedTokens[_token] = false;
         emit SupportedTokenRemoved(_token);
     }
+
     function deposit(uint256 amount, uint256 l2Recipient) external payable {
         token.approve(address(starknetBridge), amount);
         starknetBridge.deposit{value: msg.value}(address(token), amount, l2EndpointAddress);
     }
+
     function depositWithMessage(uint256 amount, uint256 l2Recipient, uint256[] calldata message) external payable {
         starknetBridge.depositWithMessage(address(token), amount, l2Recipient, message);
     }
@@ -154,7 +151,7 @@ contract L1TWAMMBridge is Ownable {
 
     function _encodeDepositPayload(OrderParams memory params) internal pure returns (uint256[] memory) {
         uint256[] memory payload = new uint256[](DEPOSIT_PAYLOAD_SIZE);
-        
+
         payload[0] = DEPOSIT_OPERATION;
         payload[1] = uint256(uint160(params.sender));
         payload[2] = uint256(uint160(params.sellToken));
