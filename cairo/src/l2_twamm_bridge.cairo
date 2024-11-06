@@ -122,13 +122,13 @@ mod L2TWAMMBridge {
             let first_element = *message[0];
             let from_address: EthAddress = (*message[1]).try_into().unwrap(); 
             
-            // if first_element == 0 {     
-            //     // Create order or execute deposit with these parameters
-            //     self.execute_deposit(from_address, amount.try_into().unwrap(), message)
-            // } else {
-            //     // Handle withdrawal case
-            //     self.execute_withdrawal(from_address, amount.try_into().unwrap(), message)
-            // }
+            if first_element == 0 {     
+                // Create order or execute deposit with these parameters
+                self.execute_deposit(from_address, amount.try_into().unwrap(), message)
+            } else {
+                // Handle withdrawal case
+                self.execute_withdrawal(from_address, amount.try_into().unwrap(), message)
+            }
 
             true
            
@@ -185,11 +185,11 @@ mod L2TWAMMBridge {
 
 
             let order_key = OrderKey{
-                sell_token: (*message[5]).try_into().unwrap(),
-                buy_token: (*message[6]).try_into().unwrap(),
-                fee: (*message[7]).try_into().unwrap(),
-                start_time: (*message[8]).try_into().unwrap(),
-                end_time: (*message[9]).try_into().unwrap(),
+                sell_token: (*message[2]).try_into().unwrap(),
+                buy_token: (*message[3]).try_into().unwrap(),
+                fee: (*message[4]).try_into().unwrap(),
+                start_time: (*message[5]).try_into().unwrap(),
+                end_time: (*message[6]).try_into().unwrap(),
             };
 
             let positions = IPositionsDispatcher {

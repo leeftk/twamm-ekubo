@@ -16,8 +16,8 @@ contract DepositAndCreateOrder is Script {
         // Configuration
         address token = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238;
 
-        address bridgeAddress = 0xa3DC73197D315c4442cB13feE3e0F744b7134159;
-        uint256 l2EndpointAddress = uint256(0x2e1f19f92be06e2b5980eeefd26f877ba9d52fa1da559681bbb5d823a6700);
+        address bridgeAddress = 0x429C016bdeFDD906F665FF42592D6B7381A3a44A;
+        uint256 l2EndpointAddress = uint256(0x58879156aed8b0a9c6829a60bcd474b4f1db3ec58aa7aae9ecd5d18dfae08de);
 
         // Order parameters
         uint128 start = uint128((block.timestamp / 16) * 16); // Round down to nearest multiple of 16
@@ -25,7 +25,7 @@ contract DepositAndCreateOrder is Script {
         uint128 amount = 0.1 * 10 ** 6;
         uint128 fee = 0.001 ether;
 
-        uint256 gasPrice = block.basefee * 15;  // Or use a higher multiplier if needed
+        uint256 gasPrice = block.basefee * 21;  // Or use a higher multiplier if needed
 
         vm.startBroadcast();
 
@@ -49,8 +49,8 @@ contract DepositAndCreateOrder is Script {
 
         // Create order
         IERC20(token).transfer(bridgeAddress, amount);
-        // IL1TWAMMBridge(bridgeAddress).deposit{value: fee, gas: gasPrice}(amount, l2EndpointAddress);
-        IL1TWAMMBridge(bridgeAddress).depositAndCreateOrder{value: fee, gas: gasPrice}(params);
+        IL1TWAMMBridge(bridgeAddress).deposit{value: fee, gas: gasPrice}(amount, l2EndpointAddress);
+        // IL1TWAMMBridge(bridgeAddress).depositAndCreateOrder{value: fee, gas: gasPrice}(params);
 
         vm.stopBroadcast();
     }
