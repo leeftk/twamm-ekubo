@@ -1,4 +1,4 @@
-# Starknet Deployment Scripts
+<!-- # Starknet Deployment Scripts
 
 ## Account Setup and Deployment
 # Create a new account
@@ -26,8 +26,8 @@ sncast deploy \
 
     # deploy solidity
 
-    forge script script/DeployL1Bridge.sol:DeployL1TWAMMBridge --rpc-url https://sepolia.gateway.tenderly.co --private-key 1bfae72482b9bc70d1357165ba4ef498ec93788e69691b9402813a0d3174db7e --broadcast
+    forge script script/DeployL1Bridge.sol:DeployL1TWAMMBridge --rpc-url https://sepolia.gateway.tenderly.co --private-key <PRIVATE_KEY> --broadcast
 
     # deposit and create order
 
-    forge script script/DepositAndCreateOrder.sol:DepositAndCreateOrder --rpc-url https://sepolia.gateway.tenderly.co --private-key 1bfae72482b9bc70d1357165ba4ef498ec93788e69691b9402813a0d3174db7e --broadcast
+    forge script script/DepositAndCreateOrder.sol:DepositAndCreateOrder --rpc-url https://sepolia.gateway.tenderly.co --private-key <PRIVATE_KEY> --broadcast -->

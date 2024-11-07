@@ -35,7 +35,7 @@ contract L1TWAMMBridge is Ownable {
     uint256 internal constant DEFAULT_NONCE = 1;
     uint256 internal constant WITHDRAWAL_PAYLOAD_SIZE = 8;
     uint256 internal constant DEPOSIT_PAYLOAD_SIZE = 7;
-    uint256 internal constant ON_RECEIVE_SELECTOR = 774397379524139446221206168840917193112228400237242521560346153613428128537;
+    uint256 internal constant ON_RECEIVE_SELECTOR = uint256(0x01101afb9568fc98d91b25365fb0f498486ed49680b8d2625a0b45a850311d1e);
 
     // State variables
     IERC20 public immutable token;
