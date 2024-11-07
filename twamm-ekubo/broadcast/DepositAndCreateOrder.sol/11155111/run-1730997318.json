@@ -1,0 +1,60 @@
+{
+  "transactions": [
+    {
+      "hash": "0x8875ed0fc8a9e6549703b443290b5e5644cc9b3d66190f2281e3fd2790f7f3f1",
+      "transactionType": "CALL",
+      "contractName": "StarkNetToken",
+      "contractAddress": "0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766",
+      "function": "approve(address,uint256)",
+      "arguments": [
+        "0x18E770E8006c6d791f476A8e74feEac33C1B62F0",
+        "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0xddb342ecc94236c29a5307d3757d0724d759453c",
+        "to": "0xca14007eff0db1f8135f4c25b34de49ab0d42766",
+        "gas": "0x9398",
+        "value": "0x0",
+        "data": "0x095ea7b300000000000000000000000018e770e8006c6d791f476a8e74feeac33c1b62f0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "nonce": "0x22c",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    },
+    {
+      "hash": "0x3c05a4d8b295e8d3a20880c90a3aa5f41695356a6989f10c6db24a90d3661f7f",
+      "transactionType": "CALL",
+      "contractName": "L1TWAMMBridge",
+      "contractAddress": "0x18E770E8006c6d791f476A8e74feEac33C1B62F0",
+      "function": "initiateWithdrawal(uint256)",
+      "arguments": [
+        "0"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0xddb342ecc94236c29a5307d3757d0724d759453c",
+        "to": "0x18e770e8006c6d791f476a8e74feeac33c1b62f0",
+        "gas": "0x18cfa",
+        "value": "0x38d7ea4c68000",
+        "data": "0x12edde5e0000000000000000000000000000000000000000000000000000000000000000",
+        "nonce": "0x22d",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    }
+  ],
+  "receipts": [],
+  "libraries": [],
+  "pending": [
+    "0x8875ed0fc8a9e6549703b443290b5e5644cc9b3d66190f2281e3fd2790f7f3f1",
+    "0x3c05a4d8b295e8d3a20880c90a3aa5f41695356a6989f10c6db24a90d3661f7f"
+  ],
+  "returns": {},
+  "timestamp": 1730997318,
+  "chain": 11155111,
+  "multi": false,
+  "commit": "e344443"
+}

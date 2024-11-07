@@ -1,4 +1,4 @@
-# Starknet Deployment Scripts
+<!-- # Starknet Deployment Scripts
 
 ## Account Setup and Deployment
 # Create a new account
@@ -35,4 +35,4 @@ sncast deploy \
 
     # deposit and create order
 
-    forge script script/DepositAndCreateOrder.sol:DepositAndCreateOrder --rpc-url https://sepolia.gateway.tenderly.co --private-key <PRIVATE_KEY> --broadcast
+    forge script script/DepositAndCreateOrder.sol:DepositAndCreateOrder --rpc-url https://sepolia.gateway.tenderly.co --private-key <PRIVATE_KEY> --broadcast -->
