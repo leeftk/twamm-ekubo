@@ -54,8 +54,8 @@ contract L1TWAMMBridgeTest is Test {
     function _createDefaultOrder() internal view returns (OrderParams memory) {
         return OrderParams(
             msg.sender,
-            address(token),
-            address(token),
+            uint256(0x516e69ab50d35cef4606116266187593f1ec83d67274143da15e0b439e45fe8),
+            uint256(0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d),
             DEFAULT_FEE,
             start,
             start + DEFAULT_DURATION,

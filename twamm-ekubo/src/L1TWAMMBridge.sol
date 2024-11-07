@@ -5,12 +5,12 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { OrderParams } from "./types/OrderParams.sol";
+import "forge-std/console.sol";
 
 interface IStarknetTokenBridge {
     function depositWithMessage(address token, uint256 amount, uint256 l2Recipient, uint256[] calldata message)
         external
-        payable
-        returns (uint256);
+        payable;
 
     function deposit(address token, uint256 amount, uint256 l2Recipient) external payable;
 
@@ -106,7 +106,6 @@ contract L1TWAMMBridge is Ownable {
         if (!validateBridge(address(token))) revert InvalidBridge();
 
         uint256[] memory payload = _encodeWithdrawalPayload(sellToken, l1Recipient, amount, 0);
-
         starknetBridge.depositWithMessage{value: msg.value}(address(token), 0, l2EndpointAddress, payload);
 
         emit WithdrawalInitiated(l1Recipient, amount);
@@ -157,8 +156,8 @@ contract L1TWAMMBridge is Ownable {
         
         payload[0] = DEPOSIT_OPERATION;
         payload[1] = uint256(uint160(params.sender));
-        payload[2] = uint256(uint160(params.sellToken));
-        payload[3] = uint256(uint160(params.buyToken));
+        payload[2] = uint256(params.sellToken);
+        payload[3] = uint256(params.buyToken);
         payload[4] = uint256(params.fee);
         payload[5] = uint256(params.start);
         payload[6] = uint256(params.end);
@@ -173,7 +172,7 @@ contract L1TWAMMBridge is Ownable {
     {
         uint256[] memory payload = new uint256[](WITHDRAWAL_PAYLOAD_SIZE);
         payload[0] = WITHDRAWAL_OPERATION;
-        payload[1] = uint256(uint160(sellToken));
+        payload[1] = uint256(params.sellToken);
         payload[2] = uint256(uint160(l1Recipient));
         payload[3] = uint256(amount);
         payload[4] = message;

@@ -10,14 +10,17 @@ interface IL1TWAMMBridge {
     function deposit(uint256 amount, uint256 l2EndpointAddress) external payable;
 }
 
+
 contract DepositAndCreateOrder is Script {
     function run() public {
         // Configuration
-        address token = 0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766;
+        address strkToken = 0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766;
+        address usdcSellToken = 0x833589FCd6EDB6e08b1D49dC5d1F3E818a548824;
 
-        address bridgeAddress = 0x71ae1b856fE1584d09F4C6041C8E47aF15836fAC;
-        uint256 l2EndpointAddress = uint256(0x3a4b7e2d060bd8eb48e2db10f16c1303b131c266cc928902c3a3a8ead7e386d);
-
+        address bridgeAddress = 0xC1fB73BeB70789FC5Ae2F6Ce47f64210a6EF9382;
+        uint256 l2EndpointAddress = uint256(0xbb05cf58fc62ed2cb385383216c6a349ba1e6713c84ac7d5c103df5648c5c3);
+        uint256 sellTokenAddress = 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d;
+        uint256 buyTokenAddress = 0x053b40a647cedfca6ca84f542a0fe36736031905a9639a7f19a3c1e66bfd5080;
         // Order parameters
         uint128 start = uint128((block.timestamp / 16) * 16); // Round down to nearest multiple of 16
         uint128 end = start + 64;
@@ -27,14 +30,14 @@ contract DepositAndCreateOrder is Script {
         vm.startBroadcast();
 
         // Approve token spending
-        IERC20(token).approve(bridgeAddress, type(uint256).max);
+        IERC20(strkToken).approve(bridgeAddress, type(uint256).max);
 
         // Create order parameters
         OrderParams memory params = OrderParams({
             sender: msg.sender,
-            sellToken: token,
-            buyToken: token,
-            fee: fee,
+            sellToken: sellTokenAddress,
+            buyToken: buyTokenAddress,
+            fee: 0,
             start: start,
             end: end,
             amount: amount,
@@ -44,9 +47,9 @@ contract DepositAndCreateOrder is Script {
 
 
         // Create order
-        IERC20(token).transfer(bridgeAddress, amount);
-        IL1TWAMMBridge(bridgeAddress).deposit{value: fee}(amount, l2EndpointAddress);
-        //IL1TWAMMBridge(bridgeAddress).depositAndCreateOrder{value: fee}(params);
+        IERC20(strkToken).transfer(bridgeAddress, amount);
+        //IL1TWAMMBridge(bridgeAddress).deposit{value: fee}(amount, l2EndpointAddress);
+        IL1TWAMMBridge(bridgeAddress).depositAndCreateOrder{value: fee}(params);
 
         vm.stopBroadcast();
     }
