@@ -18,8 +18,8 @@ contract DepositAndCreateOrder is Script {
         address strkToken = 0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766;
         address usdcSellToken = 0x833589FCd6EDB6e08b1D49dC5d1F3E818a548824;
 
-        address bridgeAddress = 0x573a408aa3f4c74F0Fee3433228B1De259B79cDA;
-        uint256 l2EndpointAddress = uint256(0xbb05cf58fc62ed2cb385383216c6a349ba1e6713c84ac7d5c103df5648c5c3);
+        address bridgeAddress = 0x4E3d409Bf0583cD9D2Cdb58265B9C6f15556325d;
+        uint256 l2EndpointAddress = uint256(0x59ed9a2f59b0d0d4123a21d02ee64d3c3e9119b34494b73c70714ed4efa263c);
         uint256 sellTokenAddress = 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d;
         uint256 buyTokenAddress = 0x053b40a647cedfca6ca84f542a0fe36736031905a9639a7f19a3c1e66bfd5080;
         // Order parameters
