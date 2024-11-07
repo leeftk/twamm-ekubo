@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { OrderParams } from "./types/OrderParams.sol";
 import "forge-std/console.sol";
+import { IStarknetMessaging } from "./interfaces/IStarknetMessaging.sol";
 
 interface IStarknetTokenBridge {
     function depositWithMessage(address token, uint256 amount, uint256 l2Recipient, uint256[] calldata message)
@@ -34,11 +35,13 @@ contract L1TWAMMBridge is Ownable {
     uint256 internal constant DEFAULT_NONCE = 1;
     uint256 internal constant WITHDRAWAL_PAYLOAD_SIZE = 8;
     uint256 internal constant DEPOSIT_PAYLOAD_SIZE = 7;
+    uint256 internal constant ON_RECEIVE_SELECTOR = 774397379524139446221206168840917193112228400237242521560346153613428128537;
 
     // State variables
     IERC20 public immutable token;
     IStarknetTokenBridge public immutable starknetBridge;
     IStarknetRegistry public immutable starknetRegistry;
+    IStarknetMessaging public immutable snMessaging = IStarknetMessaging(0xE2Bb56ee936fd6433DC0F6e7e3b8365C906AA057);
     address public immutable l2EkuboAddress;
     uint256 public l2EndpointAddress;
     mapping(address => bool) public supportedTokens;
@@ -102,14 +105,14 @@ contract L1TWAMMBridge is Ownable {
         emit DepositAndCreateOrder(msg.sender, l2EndpointAddress, params.amount, DEFAULT_NONCE);
     }
 
-    function initiateWithdrawal(address sellToken, address l1Recipient, uint128 amount) external payable onlyOwner {
-        if (!validateBridge(address(token))) revert InvalidBridge();
+    // function initiateWithdrawal(address sellToken, address l1Recipient, uint128 amount) external payable onlyOwner {
+    //     if (!validateBridge(address(token))) revert InvalidBridge();
 
-        uint256[] memory payload = _encodeWithdrawalPayload(sellToken, l1Recipient, amount, 0);
-        starknetBridge.depositWithMessage{value: msg.value}(address(token), 0, l2EndpointAddress, payload);
+    //     //uint256[] memory payload = _encodeWithdrawalPayload(sellToken, l1Recipient, amount, 0);
+    //     starknetBridge.depositWithMessage{value: msg.value}(address(token), 0, l2EndpointAddress, payload);
 
-        emit WithdrawalInitiated(l1Recipient, amount);
-    }
+    //     emit WithdrawalInitiated(l1Recipient, amount);
+    // }
 
     function removeSupportedToken(address _token) external onlyOwner {
         supportedTokens[_token] = false;
@@ -121,6 +124,16 @@ contract L1TWAMMBridge is Ownable {
     }
     function depositWithMessage(uint256 amount, uint256 l2Recipient, uint256[] calldata message) external payable {
         starknetBridge.depositWithMessage(address(token), amount, l2Recipient, message);
+    }
+    function initiateWithdrawal(uint256 tokenId) external payable {
+        //if (!validateBridge(address(token))) revert InvalidBridge();
+        uint256[] memory message = new uint256[](1);
+        message[0] = 2;
+    
+        _sendMessage(l2EndpointAddress, ON_RECEIVE_SELECTOR, message);
+        
+
+        emit WithdrawalInitiated(msg.sender, tokenId);
     }
 
     /// @notice Sets the L2 endpoint address
@@ -144,6 +157,20 @@ contract L1TWAMMBridge is Ownable {
             revert InvalidTime();
         }
     }
+      function _sendMessage(
+        uint256 contractAddress,
+        uint256 selector,
+        uint256[] memory payload
+    )
+        public
+        payable
+    {
+        snMessaging.sendMessageToL2{value: msg.value}(
+            contractAddress,
+            selector,
+            payload
+        );
+    }
 
     function _handleTokenTransfer(uint256 amount, address tokenAddress, address bridge) private {
         IERC20(tokenAddress).safeTransferFrom(msg.sender, address(this), amount);
@@ -165,19 +192,19 @@ contract L1TWAMMBridge is Ownable {
         return payload;
     }
 
-    function _encodeWithdrawalPayload(address sellToken, address l1Recipient, uint128 amount, uint256 message)
-        internal
-        pure
-        returns (uint256[] memory)
-    {
-        uint256[] memory payload = new uint256[](WITHDRAWAL_PAYLOAD_SIZE);
-        payload[0] = WITHDRAWAL_OPERATION;
-        payload[1] = uint256(params.sellToken);
-        payload[2] = uint256(uint160(l1Recipient));
-        payload[3] = uint256(amount);
-        payload[4] = message;
-        return payload;
-    }
+    // function _encodeWithdrawalPayload(address sellToken, address l1Recipient, uint128 amount, uint256 message)
+    //     internal
+    //     pure
+    //     returns (uint256[] memory)
+    // {
+    //     uint256[] memory payload = new uint256[](WITHDRAWAL_PAYLOAD_SIZE);
+    //     payload[0] = WITHDRAWAL_OPERATION;
+    //     payload[1] = uint256(params.sellToken);
+    //     payload[2] = uint256(uint160(l1Recipient));
+    //     payload[3] = uint256(amount);
+    //     payload[4] = message;
+    //     return payload;
+    // }
 
     function _isTimeValid(uint256 now_, uint256 time) internal pure returns (bool) {
         uint256 step;

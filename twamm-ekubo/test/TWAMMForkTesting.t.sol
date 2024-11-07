@@ -158,7 +158,7 @@ contract L1TWAMMBridgeTest is Test {
 
         vm.expectRevert();
         vm.prank(user);
-        bridge.initiateWithdrawal(address(token), l1Recipient, amount);
+        bridge.initiateWithdrawal(id);
     }
 
     function testInvalidTimeRange() public {
