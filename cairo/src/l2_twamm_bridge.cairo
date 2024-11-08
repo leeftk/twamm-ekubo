@@ -90,6 +90,18 @@ mod L2TWAMMBridge {
         sale_rate_delta: u128,
     }
 
+    #[derive(Drop, Serde, Copy)]
+    struct Payload {
+        deposit_operation: felt252,
+        sender: felt252,
+        sell_token: felt252,
+        buy_token: felt252,
+        fee: felt252,
+        start: felt252,
+        end: felt252,
+        amount: felt252,
+    }
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -98,7 +110,7 @@ mod L2TWAMMBridge {
 
     #[derive(Drop, starknet::Event)]
     struct MessageReceived {
-        message: felt252
+        message: Payload
     }
 
 
@@ -108,34 +120,70 @@ mod L2TWAMMBridge {
     }
 
     #[l1_handler]
-    fn msg_handler_felt(ref self: ContractState, from_address: felt252, my_felt: felt252) {
-        let current_timestamp = get_block_timestamp();
-        let difference = 16 - (current_timestamp % 16);
-        let start_time = (current_timestamp + difference);
-        let end_time = start_time + 64;
-        let amount = 1_u256;
+    fn msg_handler_struct(ref self: ContractState, from_address: felt252, data: Payload) {
+        self.emit(MessageReceived {
+            message: data
+        });
+        // if data.deposit_operation == 0 {
+ 
 
-        let mut sellTokenAddress =  contract_address_const::<0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d>();
-        let mut buyTokenAddress =  contract_address_const::<0x053b40a647cedfca6ca84f542a0fe36736031905a9639a7f19a3c1e66bfd5080>();
+            // let order_key = OrderKey{
+            //     sell_token: data.sell_token.try_into().unwrap(),
+            //     buy_token: data.buy_token.try_into().unwrap(),
+            //     fee: data.fee.try_into().unwrap(),
+            //     start_time: data.start.try_into().unwrap(),
+            //     end_time: data.end.try_into().unwrap(),
+            // };
+
+            // let positions = IPositionsDispatcher {
+            //     // contract_address: self.positions_address.read()
+            //     contract_address:  contract_address_const::<
+            //     0x06a2aee84bb0ed5dded4384ddd0e40e9c1372b818668375ab8e3ec08807417e5
+            // >()
+            // };
+            // //Overflow vuln here
+            // let amount_u128: u128 = data.amount.try_into().unwrap();
+
+            // let (id, minted) = positions.mint_and_increase_sell_amount(order_key, amount_u128);
+            // assert(minted != 0, ERROR_NO_TOKENS_MINTED);
+            // assert(id != 0, ERROR_ZERO_AMOUNT);
+            // self.order_depositor_to_id.write(from_address.try_into().unwrap(), id);
+            
+        //     // self.order_id_to_depositor.write(id, from_address.try_into().unwrap());
+        // } else if data.deposit_operation == 2 {
+        //     self.emit(MessageReceived {
+        //         message: data
+        //     });
+
+        // }
+    //     let current_timestamp = get_block_timestamp();
+    //     let difference = 16 - (current_timestamp % 16);
+    //     let start_time = (current_timestamp + difference);
+    //     let end_time = start_time + 64;
+    //     let amount = 1_u256;
+
+    //     let mut sellTokenAddress =  contract_address_const::<0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d>();
+    //     let mut buyTokenAddress =  contract_address_const::<0x053b40a647cedfca6ca84f542a0fe36736031905a9639a7f19a3c1e66bfd5080>();
     
-    let order_key = OrderKey{
-                    sell_token: sellTokenAddress,
-                    buy_token: buyTokenAddress,
-                    fee: 0,
-                    start_time: start_time,
-                    end_time: end_time,
-                }; 
+    // let order_key = OrderKey{
+    //                 sell_token: sellTokenAddress,
+    //                 buy_token: buyTokenAddress,
+    //                 fee: 0,
+    //                 start_time: start_time,
+    //                 end_time: end_time,
+    //             }; 
 
-                let positions = IPositionsDispatcher {
-                    // contract_address: self.positions_address.read()
-                    contract_address:  contract_address_const::<
-                    0x06a2aee84bb0ed5dded4384ddd0e40e9c1372b818668375ab8e3ec08807417e5
-                >()
-                };
+    //             let positions = IPositionsDispatcher {
+    //                 // contract_address: self.positions_address.read()
+    //                 contract_address:  contract_address_const::<
+    //                 0x06a2aee84bb0ed5dded4384ddd0e40e9c1372b818668375ab8e3ec08807417e5
+    //             >()
+    //             };
 
-            let (id, minted) = positions.mint_and_increase_sell_amount(order_key, amount.try_into().unwrap());
+    //         let (id, minted) = positions.mint_and_increase_sell_amount(order_key, amount.try_into().unwrap());
 
         // self.execute_deposit(from_address, amount, message)
+        
     }
 
     #[external(v0)]
@@ -234,7 +282,9 @@ mod L2TWAMMBridge {
 
         fn execute_deposit(
             ref self: ContractState, depositor: EthAddress, amount: u256, message: Span<felt252>
-        ) -> bool {
+        ) 
+        // -> bool
+         {
             let order_key = self.create_order_key(message);
             let positions = IPositionsDispatcher {
                 // contract_address: self.positions_address.read()
@@ -251,7 +301,7 @@ mod L2TWAMMBridge {
             self.order_depositor_to_id.write(depositor, id);
             
             self.order_id_to_depositor.write(id, depositor);
-            true
+            // true
         }
 
         fn execute_withdrawal(
