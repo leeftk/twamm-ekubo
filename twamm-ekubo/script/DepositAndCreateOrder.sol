@@ -18,8 +18,8 @@ contract DepositAndCreateOrder is Script {
         address strkToken = 0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766; //stark on l1 sepolia
         address usdcSellToken = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238; //usdc on l1 sepolia
 
-        address bridgeAddress = 0xab26B1058f9A03E111c2BC17866eA5aF0dD37f0e;
-        uint256 l2EndpointAddress = uint256(0x44fdeb1816de942e7afc558c3a4552cac8e50626f43f6bf831710a1abdcb970);
+        address bridgeAddress = 0x4b220A6B4f695db8CEdC121ACFC2484fCaaB8b45;
+        uint256 l2EndpointAddress = uint256(0x7721d8633add90ecf6bffe9dcd71b0ce5cc5436923b9d90b56c20d3a53438cb);
         uint256 sellTokenAddress = 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d; //stark on l2
         uint256 buyTokenAddress = 0x053b40a647cedfca6ca84f542a0fe36736031905a9639a7f19a3c1e66bfd5080; //usdc on l2
         // Order parameters
