@@ -34,8 +34,8 @@ contract L1TWAMMBridge is Ownable {
     uint256 internal constant WITHDRAWAL_OPERATION = 1;
     uint256 internal constant DEFAULT_NONCE = 1;
     uint256 internal constant WITHDRAWAL_PAYLOAD_SIZE = 8;
-    uint256 internal constant DEPOSIT_PAYLOAD_SIZE = 7;
-    uint256 internal constant ON_RECEIVE_SELECTOR = 774397379524139446221206168840917193112228400237242521560346153613428128537;
+    uint256 internal constant DEPOSIT_PAYLOAD_SIZE = 8;
+    uint256 internal constant ON_RECEIVE_SELECTOR = uint256(0x01101afb9568fc98d91b25365fb0f498486ed49680b8d2625a0b45a850311d1e);
 
     // State variables
     IERC20 public immutable token;
@@ -99,8 +99,9 @@ contract L1TWAMMBridge is Ownable {
         _handleTokenTransfer(params.amount, address(token), address(starknetBridge));
 
         uint256[] memory payload = _encodeDepositPayload(params);
-
-        starknetBridge.depositWithMessage{value: msg.value}(address(token), params.amount, l2EndpointAddress, payload);
+        starknetBridge.deposit{value: msg.value}(address(token), params.amount, l2EndpointAddress);
+        // starknetBridge.depositWithMessage{value: msg.value}(address(token), params.amount, l2EndpointAddress, payload);
+        _sendMessage(l2EndpointAddress, uint256(0x00f1149cade9d692862ad41df96b108aa2c20af34f640457e781d166c98dc6b0), payload);
 
         emit DepositAndCreateOrder(msg.sender, l2EndpointAddress, params.amount, DEFAULT_NONCE);
     }
@@ -188,6 +189,7 @@ contract L1TWAMMBridge is Ownable {
         payload[4] = uint256(params.fee);
         payload[5] = uint256(params.start);
         payload[6] = uint256(params.end);
+        payload[7] = uint256(params.amount);
 
         return payload;
     }

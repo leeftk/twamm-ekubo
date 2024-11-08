@@ -1,0 +1,59 @@
+{
+  "transactions": [
+    {
+      "hash": null,
+      "transactionType": "CALL",
+      "contractName": "StarkNetToken",
+      "contractAddress": "0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766",
+      "function": "approve(address,uint256)",
+      "arguments": [
+        "0xa37Cb2cD03619597Bca95D8DCbcCcb642e526756",
+        "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0xddb342ecc94236c29a5307d3757d0724d759453c",
+        "to": "0xca14007eff0db1f8135f4c25b34de49ab0d42766",
+        "gas": "0x93a9",
+        "value": "0x0",
+        "data": "0x095ea7b3000000000000000000000000a37cb2cd03619597bca95d8dcbcccb642e526756ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "nonce": "0x246",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    },
+    {
+      "hash": null,
+      "transactionType": "CALL",
+      "contractName": "L1TWAMMBridge",
+      "contractAddress": "0xa37Cb2cD03619597Bca95D8DCbcCcb642e526756",
+      "function": "_sendMessage(uint256,uint256,uint256[])",
+      "arguments": [
+        "677971976306712280810047050700920315075157035301188619020854104939969386538",
+        "425952401605428413817582304755919420533935873840436977667370850915372091056",
+        "[2]"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0xddb342ecc94236c29a5307d3757d0724d759453c",
+        "to": "0xa37cb2cd03619597bca95d8dcbcccb642e526756",
+        "gas": "0x18293",
+        "value": "0x7a120",
+        "data": "0x88f439ef017fb7f23ebf3e40289ce5ca30169d459217fac332884502360262dd1078182a00f1149cade9d692862ad41df96b108aa2c20af34f640457e781d166c98dc6b0000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002",
+        "nonce": "0x247",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    }
+  ],
+  "receipts": [],
+  "libraries": [],
+  "pending": [],
+  "returns": {},
+  "timestamp": 1731061725,
+  "chain": 11155111,
+  "multi": false,
+  "commit": "7c9bc56"
+}
