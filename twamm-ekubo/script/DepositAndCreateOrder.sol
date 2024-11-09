@@ -5,6 +5,7 @@ import {Script} from "forge-std/Script.sol";
 import "forge-std/console.sol";
 import {OrderParams} from "../src/types/OrderParams.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IStarknetMessaging} from "../src/interfaces/IStarknetMessaging.sol";
 
 interface IL1TWAMMBridge {
     function depositAndCreateOrder(OrderParams memory params) external payable;
@@ -18,9 +19,9 @@ contract DepositAndCreateOrder is Script {
         // Configuration
         address strkToken = 0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766; //stark on l1 sepolia
         address usdcSellToken = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238; //usdc on l1 sepolia
-
-        address bridgeAddress = 0xa37Cb2cD03619597Bca95D8DCbcCcb642e526756;
-        uint256 l2EndpointAddress = uint256(0x17fb7f23ebf3e40289ce5ca30169d459217fac332884502360262dd1078182a);
+        IStarknetMessaging snMessaging = IStarknetMessaging(0xE2Bb56ee936fd6433DC0F6e7e3b8365C906AA057);
+        address bridgeAddress = 0xb4F545EfEEa78f9C97C681cD70c6a6dd72fbEFee;
+        uint256 l2EndpointAddress = uint256(0x3e0f83ba17eac9112e452a72493e4abc71f4e749fa376278e16a6169d4e7255);
         uint256 sellTokenAddress = 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d; //stark on l2
         uint256 buyTokenAddress = 0x053b40a647cedfca6ca84f542a0fe36736031905a9639a7f19a3c1e66bfd5080; //usdc on l2
         // Order parameters
@@ -28,7 +29,7 @@ contract DepositAndCreateOrder is Script {
         uint128 end = start + 64;
         uint128 amount = 0.5 * 10 ** 6;
         uint128 fee = 0.0001 ether;
-        uint256 gasPrice = block.basefee * 1080;
+        uint256 gasPrice = block.basefee * 100;
 
         vm.startBroadcast();
 
@@ -62,14 +63,21 @@ contract DepositAndCreateOrder is Script {
         // IERC20(strkToken).transfer(bridgeAddress, amount);
         // console.log("Balance of User: ", IERC20(strkToken).balanceOf(address(msg.sender)));
         // IL1TWAMMBridge(bridgeAddress).deposit{value: fee}(amount, l2EndpointAddress);
-        // IL1TWAMMBridge(bridgeAddress).depositAndCreateOrder{value: fee}(params);
+        IL1TWAMMBridge(bridgeAddress).depositAndCreateOrder{value: fee}(params);
+        // IL1TWAMMBridge(bridgeAddress).initiateWithdrawal{value: fee}(0);
 
-        uint256[] memory message = new uint256[](1);
+        uint256[] memory message = new uint256[](8);
         message[0] = 2;
-
-        uint256 L2_SELECTOR_VALUE = uint256(0x00f1149cade9d692862ad41df96b108aa2c20af34f640457e781d166c98dc6b0);
-        IL1TWAMMBridge(bridgeAddress)._sendMessage{value: amount, gas: gasPrice}(l2EndpointAddress, L2_SELECTOR_VALUE, message);
-
+        message[1] = 0;
+        message[2] = 0;
+        message[3] = 0;
+        message[4] = 0;
+        message[5] = 0;
+        message[6] = 0;
+        message[7] = 0;
+        // uint256 L2_SELECTOR_VALUE = uint256(0x00f1149cade9d692862ad41df96b108aa2c20af34f640457e781d166c98dc6b0);
+        // IL1TWAMMBridge(bridgeAddress)._sendMessage{value: fee, gas: gasPrice}(l2EndpointAddress, L2_SELECTOR_VALUE, message);
+        // snMessaging.sendMessageToL2{value: fee}(l2EndpointAddress, L2_SELECTOR_VALUE, message);
         vm.stopBroadcast();
     }
 }

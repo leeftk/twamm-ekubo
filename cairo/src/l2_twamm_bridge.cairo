@@ -25,18 +25,18 @@ pub trait ITokenBridge<TContractState> {
 
 #[starknet::interface]
 pub trait IL2TWAMMBridge<TContractState> {
-    fn on_receive(
-        ref self: TContractState,
-        l2_token: ContractAddress,
-        amount: u256,
-        depositor: EthAddress,
-        message: Span<felt252>
-    ) -> bool;
-    fn set_positions_address(ref self: TContractState, address: ContractAddress);
-
+    // fn on_receive(
+    //     ref self: TContractState,
+    //     l2_token: ContractAddress,
+    //     amount: u256,
+    //     depositor: EthAddress,
+    //     message: Span<felt252>
+    // ) -> bool;
     fn withdraw_proceeds_from_sale_to_self(
         ref self: TContractState, id: u64, order_key: OrderKey
     ) -> u128;
+    fn create_order_key(ref self: TContractState, message: Span<felt252>) -> OrderKey;
+    fn set_positions_address(ref self: TContractState, address: ContractAddress);
     fn set_token_bridge_address(ref self: TContractState, address: ContractAddress);
     fn get_depositor_from_id(ref self: TContractState, id: u64) -> EthAddress;
     fn get_token_id_by_depositor(ref self: TContractState, depositor: EthAddress) -> u64;
@@ -51,8 +51,7 @@ pub trait IL2TWAMMBridge<TContractState> {
 mod L2TWAMMBridge {
     use ekubo::interfaces::positions::{IPositionsDispatcher, IPositionsDispatcherTrait};
     use ekubo::extensions::interfaces::twamm::{OrderKey};
-
-    use starknet::{ContractAddress, get_contract_address};
+    use starknet::{ContractAddress, get_contract_address, contract_address_const, get_block_timestamp};
 
     use super::{Map, StoragePointerWriteAccess, StorageMapReadAccess, StoragePointerReadAccess, StoragePath,
         StoragePathEntry, StorageMapWriteAccess};
@@ -70,7 +69,7 @@ mod L2TWAMMBridge {
 
     #[storage]
     struct Storage {
-        sender_to_amount: Map::<EthAddress, u128>,
+        sender_to_amount: Map::<EthAddress, u256>,
         positions_address: ContractAddress,
         token_bridge_address: ContractAddress,
         order_id_to_depositor: Map::<u64, EthAddress>,
@@ -90,23 +89,30 @@ mod L2TWAMMBridge {
         id: u64,
         sale_rate_delta: u128,
     }
-    //Added event for testing
+
+    #[derive(Drop, Serde, Copy)]
+    struct MyData {
+        deposit_operation: felt252,
+        sender: felt252,
+        sell_token: felt252,
+        buy_token: felt252,
+        fee: felt252,
+        start: felt252,
+    end: felt252,
+    amount: felt252,
+    }
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
         MessageReceived: MessageReceived,
+        DepositOperation: DepositOperation,
+        WithdrawalOperation: WithdrawalOperation,
     }
 
     #[derive(Drop, starknet::Event)]
     struct MessageReceived {
-        l2_token: ContractAddress,
-        amount: u256,
-        depositor: EthAddress,
-        message: Span<felt252>
-    }
-
-    #[derive(Drop, Serde, Copy)]
-    struct Payload {
+        #[key]
         deposit_operation: felt252,
         sender: felt252,
         sell_token: felt252,
@@ -116,18 +122,14 @@ mod L2TWAMMBridge {
         end: felt252,
         amount: felt252,
     }
-
-    #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
-        MessageReceived: MessageReceived,
+    struct DepositOperation {
+        deposit_operation: felt252,
     }
-
     #[derive(Drop, starknet::Event)]
-    struct MessageReceived {
-        message: Payload
+    struct WithdrawalOperation {
+        withdrawal_operation: felt252,
     }
-
 
     #[constructor]
     fn constructor(ref self: ContractState) {
@@ -135,11 +137,26 @@ mod L2TWAMMBridge {
     }
 
     #[l1_handler]
-    fn msg_handler_struct(ref self: ContractState, from_address: felt252, data: Payload) {
+    fn msg_handler_struct(ref self: ContractState, from_address: felt252, data: MyData) {
         self.emit(MessageReceived {
-            message: data
+            deposit_operation: data.deposit_operation,
+            sender: if data.sender == 0 { 0 } else { data.sender },
+            sell_token: if data.sell_token == 0 { 0 } else { data.sell_token },
+            buy_token: if data.buy_token == 0 { 0 } else { data.buy_token },
+            fee: if data.fee == 0 { 0 } else { data.fee },
+            start: if data.start == 0 { 0 } else { data.start },
+            end: if data.end == 0 { 0 } else { data.end },
+            amount: if data.amount == 0 { 0 } else { data.amount },
         });
-        // if data.deposit_operation == 0 {
+        if data.deposit_operation == 0 {
+            self.emit(DepositOperation {
+                deposit_operation: data.deposit_operation,
+            });
+        } else if data.deposit_operation == 2 {
+            self.emit(WithdrawalOperation {
+                withdrawal_operation: data.deposit_operation,
+            });
+        }
  
 
             // let order_key = OrderKey{
@@ -204,28 +221,29 @@ mod L2TWAMMBridge {
     #[external(v0)]
     #[abi(embed_v0)]
     impl L2TWAMMBridge of super::IL2TWAMMBridge<ContractState> {
-
-        fn on_receive(
-            ref self: ContractState,
-            l2_token: ContractAddress,
-            amount: u256,
-            depositor: EthAddress,
-            message: Span<felt252>
-        ) -> bool {
-            self.emit(MessageReceived { l2_token, amount, depositor, message });
-            let mut message_span = message;
-            let first_element = *message[0];
-            let from_address: EthAddress = (*message[1]).try_into().unwrap(); 
-            let amount_128 : u128 = amount.try_into().unwrap();
+    //     fn on_receive(
+    //         ref self: ContractState,
+    //         l2_token: ContractAddress,
+    //         amount: u256,
+    //         depositor: EthAddress,
+    //         message: Span<felt252>
+    //     ) -> bool {
+    //         let mut message_span = message;
+    //         let first_element = *message[0];
+    //         let from_address: EthAddress = (*message[1]).try_into().unwrap(); 
             
-            if first_element == 0 {     
-                // Create order or execute deposit with these parameters
-                self.execute_deposit(from_address, amount_128, message)
-           } else {
-                true
-           }
-           
-        }
+    //         if first_element == 0 {     
+    //             // Create order or execute deposit with these parameters
+    //             self.execute_deposit(from_address, amount, message)
+    //         } else if first_element == 2 {
+                
+    //             self.execute_withdrawal(from_address, amount, message)
+    //         } else{
+    //             true
+    //         }
+    //     }
+
+
 
         fn withdraw_proceeds_from_sale_to_self(
             ref self: ContractState, id: u64, order_key: OrderKey
@@ -272,27 +290,44 @@ mod L2TWAMMBridge {
             self.assert_only_owner();
             self.l2_token_to_l1_token.read(l2_token)
         }
-
+        fn create_order_key(ref self: ContractState, message: Span<felt252>) -> OrderKey {
+            OrderKey {
+                sell_token: (*message[2]).try_into().unwrap(),
+                buy_token: (*message[3]).try_into().unwrap(),
+                fee: (*message[4]).try_into().unwrap(),
+                start_time: (*message[5]).try_into().unwrap(),
+                end_time: (*message[6]).try_into().unwrap(),
+            }
+        }
     }
     #[generate_trait]
     impl PrivateFunctions of PrivateFunctionsTrait {
+        fn create_order_key(message: Span<felt252>) -> OrderKey {
+            OrderKey {
+                sell_token: (*message[2]).try_into().unwrap(),
+                buy_token: (*message[3]).try_into().unwrap(),
+                fee: (*message[4]).try_into().unwrap(),
+                start_time: (*message[5]).try_into().unwrap(),
+                end_time: (*message[6]).try_into().unwrap(),
+            }
+        }
+
         fn execute_deposit(
-            ref self: ContractState, depositor: EthAddress, amount: u128, message: Span<felt252>
-        ) -> bool {
-
-    
-
-
-
-
+            ref self: ContractState, depositor: EthAddress, amount: u256, message: Span<felt252>
+        ) 
+        // -> bool
+         {
+            let order_key = self.create_order_key(message);
             let positions = IPositionsDispatcher {
                 // contract_address: self.positions_address.read()
                 contract_address:  contract_address_const::<
                 0x06a2aee84bb0ed5dded4384ddd0e40e9c1372b818668375ab8e3ec08807417e5
             >()
             };
+            //Overflow vuln here
+            let amount_u128: u128 = amount.try_into().unwrap();
 
-            let (id, minted) = positions.mint_and_increase_sell_amount(order_key, amount);
+            let (id, minted) = positions.mint_and_increase_sell_amount(order_key, amount_u128);
             assert(minted != 0, ERROR_NO_TOKENS_MINTED);
             assert(id != 0, ERROR_ZERO_AMOUNT);
             self.order_depositor_to_id.write(depositor, id);
@@ -302,16 +337,9 @@ mod L2TWAMMBridge {
         }
 
         fn execute_withdrawal(
-            ref self: ContractState, depositor: EthAddress, amount: u128, message: Span<felt252>
+            ref self: ContractState, depositor: EthAddress, amount: u256, message: Span<felt252>
         ) -> bool {
-            let order_key = OrderKey{
-                sell_token: (*message[5]).try_into().unwrap(),
-                buy_token: (*message[6]).try_into().unwrap(),
-                fee: (*message[7]).try_into().unwrap(),
-                start_time: (*message[8]).try_into().unwrap(),
-                end_time: (*message[9]).try_into().unwrap(),
-            };
-
+            let order_key = self.create_order_key(message);
             let id: u64 = (*message[10]).try_into().unwrap();
 
             let user = self.get_depositor_from_id(id);
@@ -320,14 +348,16 @@ mod L2TWAMMBridge {
 
             let amount_sold = self.withdraw_proceeds_from_sale_to_self(id, order_key);
             assert(amount_sold != 0, ERROR_NO_TOKENS_SOLD);
-            let new_amount = amount - amount_sold;
+            let amount_sold_u256: u256 = amount_sold.into();
+
+            let new_amount: u256 = amount - amount_sold_u256;
             self.sender_to_amount.write(depositor, new_amount);
             let bridge_address = self.get_l2_bridge_by_l2_token(order_key.buy_token);
 
             let token_bridge = ITokenBridgeDispatcher { contract_address: bridge_address };
             let l1_token = self.get_l1_token_by_l2_token(order_key.buy_token);
 
-            // token_bridge.initiate_token_withdraw(l1_token, depositor, amount_sold);
+            token_bridge.initiate_token_withdraw(l1_token, depositor, amount_sold.into());
             true
         }
         fn assert_only_owner(ref self: ContractState) {

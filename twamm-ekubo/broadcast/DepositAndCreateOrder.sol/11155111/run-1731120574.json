@@ -1,0 +1,59 @@
+{
+  "transactions": [
+    {
+      "hash": "0x7b5be2f64d8c02c895c5a33d9826f4fb962498932c2d8bce25d3abb50e57a668",
+      "transactionType": "CALL",
+      "contractName": "StarkNetToken",
+      "contractAddress": "0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766",
+      "function": "approve(address,uint256)",
+      "arguments": [
+        "0x3A169a1C2341ed3fa9e0d4A32421156b6b20DA84",
+        "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0xddb342ecc94236c29a5307d3757d0724d759453c",
+        "to": "0xca14007eff0db1f8135f4c25b34de49ab0d42766",
+        "gas": "0xff08",
+        "value": "0x0",
+        "data": "0x095ea7b30000000000000000000000003a169a1c2341ed3fa9e0d4a32421156b6b20da84ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "nonce": "0x262",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    },
+    {
+      "hash": null,
+      "transactionType": "CALL",
+      "contractName": "L1TWAMMBridge",
+      "contractAddress": "0x3A169a1C2341ed3fa9e0d4A32421156b6b20DA84",
+      "function": "initiateWithdrawal(uint256)",
+      "arguments": [
+        "0"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0xddb342ecc94236c29a5307d3757d0724d759453c",
+        "to": "0x3a169a1c2341ed3fa9e0d4a32421156b6b20da84",
+        "gas": "0x19d1e",
+        "value": "0x5af3107a4000",
+        "data": "0x12edde5e0000000000000000000000000000000000000000000000000000000000000000",
+        "nonce": "0x263",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    }
+  ],
+  "receipts": [],
+  "libraries": [],
+  "pending": [
+    "0x7b5be2f64d8c02c895c5a33d9826f4fb962498932c2d8bce25d3abb50e57a668"
+  ],
+  "returns": {},
+  "timestamp": 1731120574,
+  "chain": 11155111,
+  "multi": false,
+  "commit": "75c82f5"
+}
