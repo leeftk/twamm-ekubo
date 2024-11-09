@@ -96,11 +96,8 @@ contract L1TWAMMBridge is Ownable {
         _handleTokenTransfer(params.amount, address(token), address(starknetBridge));
 
         uint256[] memory payload = _encodeDepositPayload(params);
-        starknetBridge.deposit{value: msg.value/2}(address(token), params.amount, l2EndpointAddress);
-        // starknetBridge.depositWithMessage{value: msg.value}(address(token), params.amount, l2EndpointAddress, payload);
-        _sendMessage(
-            l2EndpointAddress, ON_RECEIVE_SELECTOR, payload
-        );
+       
+        _depositWithMessage(params.amount, payload);
 
         emit DepositAndCreateOrder(msg.sender, l2EndpointAddress, params.amount, DEFAULT_NONCE);
     }
@@ -124,10 +121,7 @@ contract L1TWAMMBridge is Ownable {
         starknetBridge.deposit{value: msg.value}(address(token), amount, l2EndpointAddress);
     }
 
-    function depositWithMessage(uint256 amount, uint256 l2Recipient, uint256[] calldata message) external payable {
-        starknetBridge.depositWithMessage(address(token), amount, l2Recipient, message);
-    }
-
+    
     function initiateWithdrawal(uint256 tokenId) external payable {
         //if (!validateBridge(address(token))) revert InvalidBridge();
         uint256[] memory message = new uint256[](8); //Padding this payload with zeroes to match the struct params on L2
@@ -166,6 +160,15 @@ contract L1TWAMMBridge is Ownable {
             revert InvalidTime();
         }
     }
+
+    /// @notice Deposits tokens and sends a message to L2
+    /// @dev This function splits the value sent, half for the deposit and half for the message fee, to avoid an out of funds error
+    function _depositWithMessage(uint256 amount,  uint256[] memory message) public payable {
+        uint256 value_allocated = msg.value / 2;
+       starknetBridge.deposit{value: value_allocated}(address(token), amount, l2EndpointAddress);
+       snMessaging.sendMessageToL2{value: value_allocated}(l2EndpointAddress, ON_RECEIVE_SELECTOR, message);
+    }
+
 
     function _sendMessage(uint256 contractAddress, uint256 selector, uint256[] memory payload) public payable {
         snMessaging.sendMessageToL2{value: msg.value/2}(contractAddress, selector, payload);
