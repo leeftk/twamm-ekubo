@@ -14,19 +14,13 @@ sncast account deploy \
 
 ## Contract Declaration and Deployment
 # Declare the L2TWAMMBridge contract
-sncast declare \
-    --account some-name \
-    --url https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_7/oTytRAZo0rI3b1-9Ki8M0s4tKVF1Tjbt \
-    --fee-token strk \
-    --contract-name L2TWAMMBridge \
-    --package twammbridge
+sncast --account some-namee declare --contract-name L2TWAMMBridge --url https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_7/oTytRAZo0rI3b1-9Ki8M0s4tKVF1Tjbt --fee-token strk --package twammbridge   
 
 # Deploy the contract using the class hash
-sncast deploy \
-    --account some-name \
+sncast --account some-name deploy \
     --url https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_7/oTytRAZo0rI3b1-9Ki8M0s4tKVF1Tjbt \
     --fee-token strk \
-    --class-hash 0x236c715846d86b6f4ba65ff6d4136fc0ddfa5530790661b101fbb3279ab64c5
+    --class-hash 0x004d8ab031f9f5fa217e3141f9c7d67b25fcc7966f7bd75e559ed49e50a663e6
 
 
     # deploy solidity
