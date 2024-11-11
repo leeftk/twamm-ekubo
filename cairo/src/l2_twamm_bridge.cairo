@@ -77,6 +77,7 @@ mod L2TWAMMBridge {
         contract_owner: ContractAddress,
         token_id_to_depositor: Map<u64, EthAddress>,
         depositor_ids: Map<EthAddress, Array<u64>>,
+        counter: u64,
         
     }
 
@@ -119,13 +120,53 @@ mod L2TWAMMBridge {
         self.contract_owner.write(get_caller_address());
     }
 
+
     #[l1_handler]
-    fn msg_handler_felt(ref self: ContractState, from_address: felt252, my_felt: felt252) {
+    fn msg_handler_value(ref self: ContractState, from_address: felt252, my_felt: felt252) {
+    //     let current_timestamp = get_block_timestamp();
+    //     let difference = 16 - (current_timestamp % 16);
+    //     let start_time = (current_timestamp + difference);
+    //     let end_time = start_time + 64;
+    //     let amount = 1_u128;
+
+    //     let mut sellTokenAddress =  contract_address_const::<0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d>();
+    //     let mut buyTokenAddress =  contract_address_const::<0x053b40a647cedfca6ca84f542a0fe36736031905a9639a7f19a3c1e66bfd5080>();
+    
+    // let order_key = OrderKey{
+    //                 sell_token: sellTokenAddress,
+    //                 buy_token: buyTokenAddress,
+    //                 fee: 0,
+    //                 start_time: start_time,
+    //                 end_time: end_time,
+    //             }; 
+
+    //             let positions = IPositionsDispatcher {
+    //                 // contract_address: self.positions_address.read()
+    //                 contract_address:  contract_address_const::<
+    //                 0x06a2aee84bb0ed5dded4384ddd0e40e9c1372b818668375ab8e3ec08807417e5
+    //             >()
+    //             };
+
+    //         let (id, minted) = positions.mint_and_increase_sell_amount(order_key, amount);
+    //         // assert(id != 0, ERROR_ZERO_AMOUNT);
+            self.counter.write(self.counter.read() + 1);
+    }
+
+
+
+
+    fn msg_handler_struct(ref self: ContractState, message: Message) {
+    }
+
+    #[external(v0)]
+    #[abi(embed_v0)]
+
+    fn deposit(ref self: ContractState) {
         let current_timestamp = get_block_timestamp();
         let difference = 16 - (current_timestamp % 16);
         let start_time = (current_timestamp + difference);
         let end_time = start_time + 64;
-        let amount = 1_u256;
+        let amount = 1_u128;
 
         let mut sellTokenAddress =  contract_address_const::<0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d>();
         let mut buyTokenAddress =  contract_address_const::<0x053b40a647cedfca6ca84f542a0fe36736031905a9639a7f19a3c1e66bfd5080>();
@@ -133,7 +174,7 @@ mod L2TWAMMBridge {
     let order_key = OrderKey{
                     sell_token: sellTokenAddress,
                     buy_token: buyTokenAddress,
-                    fee: 0,
+                    fee: 170141183460469235273462165868118016,
                     start_time: start_time,
                     end_time: end_time,
                 }; 
@@ -145,10 +186,39 @@ mod L2TWAMMBridge {
                 >()
                 };
 
-            let (id, minted) = positions.mint_and_increase_sell_amount(order_key, amount.try_into().unwrap());
-
-        // self.execute_deposit(from_address, amount, message)
+            let (id, minted) = positions.mint_and_increase_sell_amount(order_key, amount);
     }
+
+    // #[l1_handler]
+    // fn msg_handler_value(ref self: ContractState, from_address: felt252, my_felt: felt252) {
+    //     let current_timestamp = get_block_timestamp();
+    //     let difference = 16 - (current_timestamp % 16);
+    //     let start_time = (current_timestamp + difference);
+    //     let end_time = start_time + 64;
+    //     let amount = 1_u256;
+
+    //     let mut sellTokenAddress =  contract_address_const::<0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d>();
+    //     let mut buyTokenAddress =  contract_address_const::<0x053b40a647cedfca6ca84f542a0fe36736031905a9639a7f19a3c1e66bfd5080>();
+    
+    // let order_key = OrderKey{
+    //                 sell_token: sellTokenAddress,
+    //                 buy_token: buyTokenAddress,
+    //                 fee: 0,
+    //                 start_time: start_time,
+    //                 end_time: end_time,
+    //             }; 
+
+    //             let positions = IPositionsDispatcher {
+    //                 // contract_address: self.positions_address.read()
+    //                 contract_address:  contract_address_const::<
+    //                 0x06a2aee84bb0ed5dded4384ddd0e40e9c1372b818668375ab8e3ec08807417e5
+    //             >()
+    //             };
+
+    //         let (id, minted) = positions.mint_and_increase_sell_amount(order_key, amount.try_into().unwrap());
+
+    //     // self.execute_deposit(from_address, amount, message)
+    // }
 
     #[external(v0)]
     #[abi(embed_v0)]
