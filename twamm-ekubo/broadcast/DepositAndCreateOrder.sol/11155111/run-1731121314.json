@@ -1,0 +1,60 @@
+{
+  "transactions": [
+    {
+      "hash": "0xf8d362154de26b6bb0dd063314b8535c2785d80f2373970d5672cbd478877fdd",
+      "transactionType": "CALL",
+      "contractName": "StarkNetToken",
+      "contractAddress": "0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766",
+      "function": "approve(address,uint256)",
+      "arguments": [
+        "0x3A169a1C2341ed3fa9e0d4A32421156b6b20DA84",
+        "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0xddb342ecc94236c29a5307d3757d0724d759453c",
+        "to": "0xca14007eff0db1f8135f4c25b34de49ab0d42766",
+        "gas": "0x93a9",
+        "value": "0x0",
+        "data": "0x095ea7b30000000000000000000000003a169a1c2341ed3fa9e0d4a32421156b6b20da84ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "nonce": "0x264",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    },
+    {
+      "hash": "0x853993d0dfcefc3738903ffc0469f16e9bdde771a7e346b6d2d9f4f965d6f077",
+      "transactionType": "CALL",
+      "contractName": "L1TWAMMBridge",
+      "contractAddress": "0x3A169a1C2341ed3fa9e0d4A32421156b6b20DA84",
+      "function": "initiateWithdrawal(uint256)",
+      "arguments": [
+        "0"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0xddb342ecc94236c29a5307d3757d0724d759453c",
+        "to": "0x3a169a1c2341ed3fa9e0d4a32421156b6b20da84",
+        "gas": "0x19d1e",
+        "value": "0x5af3107a4000",
+        "data": "0x12edde5e0000000000000000000000000000000000000000000000000000000000000000",
+        "nonce": "0x265",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    }
+  ],
+  "receipts": [],
+  "libraries": [],
+  "pending": [
+    "0xf8d362154de26b6bb0dd063314b8535c2785d80f2373970d5672cbd478877fdd",
+    "0x853993d0dfcefc3738903ffc0469f16e9bdde771a7e346b6d2d9f4f965d6f077"
+  ],
+  "returns": {},
+  "timestamp": 1731121314,
+  "chain": 11155111,
+  "multi": false,
+  "commit": "75c82f5"
+}

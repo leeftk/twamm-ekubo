@@ -1,0 +1,61 @@
+{
+  "transactions": [
+    {
+      "hash": "0x19bc15abc5fe24a0084c21ac780933ffe39d58d68bc8748828d69216c6856274",
+      "transactionType": "CALL",
+      "contractName": "StarkNetToken",
+      "contractAddress": "0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766",
+      "function": "approve(address,uint256)",
+      "arguments": [
+        "0xab26B1058f9A03E111c2BC17866eA5aF0dD37f0e",
+        "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0xddb342ecc94236c29a5307d3757d0724d759453c",
+        "to": "0xca14007eff0db1f8135f4c25b34de49ab0d42766",
+        "gas": "0x93a9",
+        "value": "0x0",
+        "data": "0x095ea7b3000000000000000000000000ab26b1058f9a03e111c2bc17866ea5af0dd37f0effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "nonce": "0x233",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    },
+    {
+      "hash": null,
+      "transactionType": "CALL",
+      "contractName": "L1TWAMMBridge",
+      "contractAddress": "0xab26B1058f9A03E111c2BC17866eA5aF0dD37f0e",
+      "function": "_sendMessage(uint256,uint256,uint256[])",
+      "arguments": [
+        "1950369285680605967319277169315996976196054019708971360272429325191653144944",
+        "148648911813996339441237705416989480313666662291090082193117818992478592220",
+        "[2]"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0xddb342ecc94236c29a5307d3757d0724d759453c",
+        "to": "0xab26b1058f9a03e111c2bc17866ea5af0dd37f0e",
+        "gas": "0x182bd",
+        "value": "0x38d7ea4c68000",
+        "data": "0x88f439ef044fdeb1816de942e7afc558c3a4552cac8e50626f43f6bf831710a1abdcb970005421de947699472df434466845d68528f221a52fce7ad2934c5dae2e1f1cdc000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002",
+        "nonce": "0x234",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    }
+  ],
+  "receipts": [],
+  "libraries": [],
+  "pending": [
+    "0x19bc15abc5fe24a0084c21ac780933ffe39d58d68bc8748828d69216c6856274"
+  ],
+  "returns": {},
+  "timestamp": 1731001099,
+  "chain": 11155111,
+  "multi": false,
+  "commit": "e344443"
+}
