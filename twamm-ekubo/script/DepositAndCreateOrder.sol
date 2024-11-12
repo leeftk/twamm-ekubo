@@ -20,16 +20,16 @@ contract DepositAndCreateOrder is Script {
         address strkToken = 0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766; //stark on l1 sepolia
         address usdcSellToken = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238; //usdc on l1 sepolia
         IStarknetMessaging snMessaging = IStarknetMessaging(0xE2Bb56ee936fd6433DC0F6e7e3b8365C906AA057);
-        address bridgeAddress = 0xeEaD9DC94aa25623aFDB6B04135C31FB58Ff09F1;
-        uint256 l2EndpointAddress = uint256(0x734de96c97a0faa920b16901a762f32c4637fb871c938d8fdf14d576f3a2ec1);
+        address bridgeAddress = 0x3fAAa70D5Ae5d8a53c1548474Ce998E83B4AA97f;
+        uint256 l2EndpointAddress = uint256(0x4e7d0f85e69bb56625aa34643e39e54a4f12c6f0e1e5a099c83fbdf0790fd14);
         uint256 sellTokenAddress = 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d; //stark on l2
         uint256 buyTokenAddress = 0x053b40a647cedfca6ca84f542a0fe36736031905a9639a7f19a3c1e66bfd5080; //usdc on l2
         // Order parameters
         uint128 start = uint128((block.timestamp / 16) * 16); // Round down to nearest multiple of 16
         uint128 end = start + 64;
-        uint128 amount = 0.5 * 10 ** 6;
+        uint128 amount = 0.5 * 10 ** 12;
         uint128 fee = 0.0001 ether;
-        uint256 gasPrice = block.basefee * 150;
+        uint256 gasPrice = block.basefee * 200;
 
         vm.startBroadcast();
 
@@ -60,9 +60,9 @@ contract DepositAndCreateOrder is Script {
         payload[7] = uint256(params.amount);
 
         // Create order
-        // IERC20(strkToken).transfer(bridgeAddress, amount);
+        IERC20(strkToken).transfer(bridgeAddress, amount);
         // console.log("Balance of User: ", IERC20(strkToken).balanceOf(address(msg.sender)));
-        // IL1TWAMMBridge(bridgeAddress).deposit{value: fee}(amount, l2EndpointAddress);
+        IL1TWAMMBridge(bridgeAddress).deposit{value: fee}(amount, l2EndpointAddress);
         //IL1TWAMMBridge(bridgeAddress).depositAndCreateOrder{value: fee}(params);
         // IL1TWAMMBridge(bridgeAddress).initiateWithdrawal{value: fee}(0);
 
@@ -76,8 +76,8 @@ contract DepositAndCreateOrder is Script {
         message[6] = 0;
         message[7] = 0;
         uint256 L2_SELECTOR_VALUE = uint256(0x00f1149cade9d692862ad41df96b108aa2c20af34f640457e781d166c98dc6b0);
-        IL1TWAMMBridge(bridgeAddress)._sendMessage{value: fee, gas: gasPrice}(l2EndpointAddress, L2_SELECTOR_VALUE, message);
-        // snMessaging.sendMessageToL2{value: fee}(l2EndpointAddress, L2_SELECTOR_VALUE, message);
+        // IL1TWAMMBridge(bridgeAddress)._sendMessage{value: fee, gas: gasPrice}(l2EndpointAddress, L2_SELECTOR_VALUE, payload);
+        snMessaging.sendMessageToL2{value: fee}(l2EndpointAddress, L2_SELECTOR_VALUE, payload);
         vm.stopBroadcast();
     }
 }
