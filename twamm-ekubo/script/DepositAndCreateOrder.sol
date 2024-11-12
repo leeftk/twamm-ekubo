@@ -20,8 +20,8 @@ contract DepositAndCreateOrder is Script {
         address strkToken = 0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766; //stark on l1 sepolia
         address usdcSellToken = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238; //usdc on l1 sepolia
         IStarknetMessaging snMessaging = IStarknetMessaging(0xE2Bb56ee936fd6433DC0F6e7e3b8365C906AA057);
-        address bridgeAddress = 0x3fAAa70D5Ae5d8a53c1548474Ce998E83B4AA97f;
-        uint256 l2EndpointAddress = uint256(0x4e7d0f85e69bb56625aa34643e39e54a4f12c6f0e1e5a099c83fbdf0790fd14);
+        address bridgeAddress = 0x450eED8bf009a64AD3F2f0a953E35e38100b93FB;
+        uint256 l2EndpointAddress = uint256(0x6e475ce68486e1177a16ed9c8d22477b6fae34c3dc5c46015b02f20cc4ace20);
         uint256 sellTokenAddress = 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d; //stark on l2
         uint256 buyTokenAddress = 0x053b40a647cedfca6ca84f542a0fe36736031905a9639a7f19a3c1e66bfd5080; //usdc on l2
         // Order parameters
@@ -29,7 +29,7 @@ contract DepositAndCreateOrder is Script {
         uint128 end = start + 64;
         uint128 amount = 0.5 * 10 ** 12;
         uint128 fee = 0.0001 ether;
-        uint256 gasPrice = block.basefee * 200;
+        uint256 gasPrice = block.basefee * 400;
 
         vm.startBroadcast();
 

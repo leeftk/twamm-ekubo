@@ -49,22 +49,11 @@ pub trait ITokenBridge<TContractState> {
 
 #[starknet::interface]
 pub trait IL2TWAMMBridge<TContractState> {
-    // fn on_receive(
-    //     ref self: TContractState,
-    //     l2_token: ContractAddress,
-    //     amount: u256,
-    //     depositor: EthAddress,
-    //     message: Span<felt252>
-    // ) -> bool;
-    fn deposit(ref self: TContractState);
     fn withdraw_proceeds_from_sale_to_self(
         ref self: TContractState, id: u64, order_key: OrderKey
     ) -> u128;
-<<<<<<< HEAD
-=======
     fn create_order_key(ref self: TContractState, message: MyData) -> OrderKey;
     fn set_positions_address(ref self: TContractState, address: ContractAddress);
->>>>>>> 39f9f49 (debug-create-order)
     fn set_token_bridge_address(ref self: TContractState, address: ContractAddress);
     fn get_depositor_from_id(ref self: TContractState, id: u64) -> EthAddress;
     fn get_token_id_by_depositor(ref self: TContractState, depositor: EthAddress) -> u64;
@@ -119,25 +108,7 @@ mod L2TWAMMBridge {
         order_key: OrderKey,
         id: u64,
         sale_rate_delta: u128,
-<<<<<<< HEAD
-    }
-    //Added event for testing
-    #[event]
-    #[derive(Drop, starknet::Event)]
-    enum Event {
-        MessageReceived: MessageReceived,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct MessageReceived {
-        l2_token: ContractAddress,
-        amount: u256,
-        depositor: EthAddress,
-        message: Span<felt252>
-    }
-=======
     } 
->>>>>>> 39f9f49 (debug-create-order)
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -172,55 +143,6 @@ mod L2TWAMMBridge {
     #[external(v0)]
     #[abi(embed_v0)]
     impl L2TWAMMBridge of super::IL2TWAMMBridge<ContractState> {
-    //     fn on_receive(
-    //         ref self: ContractState,
-    //         l2_token: ContractAddress,
-    //         amount: u256,
-    //         depositor: EthAddress,
-    //         message: Span<felt252>
-    //     ) -> bool {
-    //         let mut message_span = message;
-    //         let first_element = *message[0];
-    //         let from_address: EthAddress = (*message[1]).try_into().unwrap(); 
-            
-    //         if first_element == 0 {     
-    //             // Create order or execute deposit with these parameters
-    //             self.execute_deposit(from_address, amount, message)
-    //         } else if first_element == 2 {
-                
-    //             self.execute_withdrawal(from_address, amount, message)
-    //         } else{
-    //             true
-    //         }
-    //     }
-
-    fn deposit(ref self: ContractState) {
-        let current_timestamp = get_block_timestamp();
-        let difference = 16 - (current_timestamp % 16);
-        let start_time = (current_timestamp + difference);
-        let end_time = start_time + 64;
-        let amount = 1_u128;
-
-        let mut sellTokenAddress =  contract_address_const::<0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d>();
-        let mut buyTokenAddress =  contract_address_const::<0x053b40a647cedfca6ca84f542a0fe36736031905a9639a7f19a3c1e66bfd5080>();
-
-        let order_key = OrderKey{
-            sell_token: sellTokenAddress,
-            buy_token: buyTokenAddress,
-            fee: 170141183460469235273462165868118016,
-            start_time: start_time,
-            end_time: end_time,
-        }; 
-
-                let positions = IPositionsDispatcher {
-                    // contract_address: self.positions_address.read()
-                    contract_address:  contract_address_const::<
-                    0x06a2aee84bb0ed5dded4384ddd0e40e9c1372b818668375ab8e3ec08807417e5
-                >()
-                };
-
-            let (id, minted) = positions.mint_and_increase_sell_amount(order_key, amount);
-    }
 
 
 
@@ -314,12 +236,20 @@ mod L2TWAMMBridge {
 =======
             ref self: ContractState, message: MyData
         ) {
+            let current_timestamp = get_block_timestamp();
+            let difference = 16 - (current_timestamp % 16);
+            let start_time = (current_timestamp + difference);
+            let end_time = start_time + 64;
+
+            let new_sell_token: ContractAddress = (message.sell_token).try_into().unwrap();
+            let new_buy_token: ContractAddress = (message.buy_token).try_into().unwrap();
+            let new_fee: u128 = (message.fee).try_into().unwrap();
                 let order_key = OrderKey{
-                sell_token: (message.sell_token).try_into().unwrap(),
-                buy_token: (message.buy_token).try_into().unwrap(),
-                fee: (message.fee).try_into().unwrap(),
-                start_time: (message.start).try_into().unwrap(),
-                end_time: (message.end).try_into().unwrap(),
+                sell_token: new_sell_token,
+                buy_token: new_buy_token,
+                fee: new_fee,
+                start_time: start_time,
+                end_time: end_time,
                 }; 
 
             let positions = IPositionsDispatcher {
@@ -334,12 +264,18 @@ mod L2TWAMMBridge {
             // .transfer(positions.contract_address, message.amount.try_into().unwrap());
              
             let (id, minted) = positions.mint_and_increase_sell_amount(order_key, amount_u128);
+<<<<<<< HEAD
             // assert(minted != 0, ERROR_NO_TOKENS_MINTED);
             // assert(id != 0, ERROR_ZERO_AMOUNT);
             // self.order_depositor_to_id.write(depositor, id);
 >>>>>>> 39f9f49 (debug-create-order)
+=======
+            assert(minted != 0, ERROR_NO_TOKENS_MINTED);
+            assert(id != 0, ERROR_ZERO_AMOUNT);
+            self.order_depositor_to_id.write(message.sender.try_into().unwrap(), id);
+>>>>>>> a4bf47e (deposit and create order working)
             
-            // self.order_id_to_depositor.write(id, depositor);
+            self.order_id_to_depositor.write(id, message.sender.try_into().unwrap());
             // true
         }
 
