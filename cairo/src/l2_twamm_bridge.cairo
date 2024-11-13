@@ -21,6 +21,16 @@ struct MyData {
     end: felt252,
     amount: felt252,
 }
+// This is a copy of the OrderKey struct that allows it to be stored in the contract
+// Probably not the best way to do this
+#[derive(Drop, Serde, Copy, starknet::Store)]
+pub struct OrderKey_Copy {
+    pub sell_token: ContractAddress,
+    pub buy_token: ContractAddress,
+    pub fee: u128,
+    pub start_time: u64,
+    pub end_time: u64
+}
 
 #[starknet::interface]
 pub(crate) trait IERC20<TContractState> {
@@ -53,6 +63,7 @@ pub trait IL2TWAMMBridge<TContractState> {
         ref self: TContractState, id: u64, order_key: OrderKey
     ) -> u128;
     fn create_order_key(ref self: TContractState, message: MyData) -> OrderKey;
+    fn decode_order_key_from_stored_copy(ref self: TContractState, message: OrderKey_Copy) -> OrderKey;
     fn set_positions_address(ref self: TContractState, address: ContractAddress);
     fn set_token_bridge_address(ref self: TContractState, address: ContractAddress);
     fn get_depositor_from_id(ref self: TContractState, id: u64) -> EthAddress;
@@ -78,6 +89,7 @@ mod L2TWAMMBridge {
     use core::array::ArrayTrait;
     use super::MyData;
     use super::{IERC20, IERC20Dispatcher, IERC20DispatcherTrait};
+    use super::OrderKey_Copy;
 
     const ERROR_NO_TOKENS_MINTED: felt252 = 'No tokens minted';
     const ERROR_NO_TOKENS_SOLD: felt252 = 'No tokens sold';
@@ -99,15 +111,13 @@ mod L2TWAMMBridge {
         token_id_to_depositor: Map<u64, EthAddress>,
         depositor_ids: Map<EthAddress, Array<u64>>,
         counter: u64,
-        
+        order_depositor_to_order_created: Map::<EthAddress, Order_Created>, 
     }
 
-    #[derive(Drop, Serde)]
-    struct Message {
-        operation_type: u8,
-        order_key: OrderKey,
+    #[derive(Drop, Serde, starknet::Store)]
+    struct Order_Created {
+        order_key: OrderKey_Copy,
         id: u64,
-        sale_rate_delta: u128,
     } 
 
     #[event]
@@ -133,8 +143,9 @@ mod L2TWAMMBridge {
         if data.deposit_operation == 0 {
             self.emit(MessageReceived { message: data });
             self.execute_deposit(data);
-        } else if data.deposit_operation == 2 {
-        self.emit(MessageReceived { message: data });
+            } else if data.deposit_operation == 2 {
+            self.emit(MessageReceived { message: data });
+            self.withdraw();
         }
         
     }
@@ -190,12 +201,24 @@ mod L2TWAMMBridge {
             self.l2_token_to_l1_token.read(l2_token)
         }
         fn create_order_key(ref self: ContractState, message: MyData) -> OrderKey {
+    
             OrderKey {
                 sell_token: (message.sell_token).try_into().unwrap(),
                 buy_token: (message.buy_token).try_into().unwrap(),
                 fee: (message.fee).try_into().unwrap(),
                 start_time: (message.start).try_into().unwrap(),
                 end_time: (message.end).try_into().unwrap(),
+            }
+        }
+
+        fn decode_order_key_from_stored_copy(ref self: ContractState, message: OrderKey_Copy) -> OrderKey {
+    
+            OrderKey {
+                sell_token: (message.sell_token).try_into().unwrap(),
+                buy_token: (message.buy_token).try_into().unwrap(),
+                fee: (message.fee).try_into().unwrap(),
+                start_time: (message.start_time).try_into().unwrap(),
+                end_time: (message.end_time).try_into().unwrap(),
             }
         }
     }
@@ -222,6 +245,7 @@ mod L2TWAMMBridge {
             let new_sell_token: ContractAddress = (message.sell_token).try_into().unwrap();
             let new_buy_token: ContractAddress = (message.buy_token).try_into().unwrap();
             let new_fee: u128 = (message.fee).try_into().unwrap();
+
                 let order_key = OrderKey{
                 sell_token: new_sell_token,
                 buy_token: new_buy_token,
@@ -229,6 +253,14 @@ mod L2TWAMMBridge {
                 start_time: start_time,
                 end_time: end_time,
                 }; 
+
+            let order_key_copy = OrderKey_Copy{
+                sell_token: new_sell_token,
+                buy_token: new_buy_token,
+                fee: new_fee,
+                start_time: start_time,
+                end_time: end_time,
+            };
 
             let positions = IPositionsDispatcher {
         // contract_address: self.positions_address.read()
@@ -247,14 +279,20 @@ mod L2TWAMMBridge {
             self.order_depositor_to_id.write(message.sender.try_into().unwrap(), id);
             
             self.order_id_to_depositor.write(id, message.sender.try_into().unwrap());
+
+            self.order_depositor_to_order_created.write(message.sender.try_into().unwrap(), Order_Created { order_key: order_key_copy, id: id });
             // true
         }
 
         fn execute_withdrawal(
             ref self: ContractState, depositor: EthAddress, amount: u256, message: MyData
         ) -> bool {
-            let order_key = self.create_order_key(message);
-            let id: u64 = (0).try_into().unwrap();// are we pasing a withdrawal id from the L1?
+
+            //fetch the order details from the depositor
+            let order_created = self.order_depositor_to_order_created.read(depositor);
+            let order_key_copy = order_created.order_key;
+            let order_key = self.decode_order_key_from_stored_copy(order_key_copy);
+            let id: u64 = (order_created.id).try_into().unwrap();// are we pasing a withdrawal id from the L1?
 
             let user = self.get_depositor_from_id(id);
 
@@ -273,6 +311,15 @@ mod L2TWAMMBridge {
 
             token_bridge.initiate_token_withdraw(l1_token, depositor, amount_sold.into());
             true
+        }
+
+        fn withdraw(ref self: ContractState){
+            let depositor:EthAddress = 0xddb342ecc94236c29a5307d3757d0724d759453c.try_into().unwrap();
+            let order_created = self.order_depositor_to_order_created.read(depositor);
+            let order_key_copy = order_created.order_key;
+            let order_key = self.decode_order_key_from_stored_copy(order_key_copy);
+            let id: u64 = (order_created.id).try_into().unwrap();
+            let amount_sold = self.withdraw_proceeds_from_sale_to_self(id, order_key);
         }
         fn assert_only_owner(ref self: ContractState) {
             let caller = get_caller_address();
