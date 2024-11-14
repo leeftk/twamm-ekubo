@@ -74,7 +74,7 @@ pub trait IL2TWAMMBridge<TContractState> {
     ) -> ContractAddress;
     fn get_l1_token_by_l2_token(ref self: TContractState, l2_token: ContractAddress) -> EthAddress;
     fn get_id_from_depositor(ref self: TContractState, depositor: EthAddress) -> u64;
-    fn send_token_to_l1(ref self: TContractState, l1_token: EthAddress, l1_recipient: EthAddress, amount: u256, message: MyData);
+    fn send_token_to_l1(ref self: TContractState, l1_token: EthAddress, l1_recipient: EthAddress, amount: u256);
 }
 
 #[starknet::contract]
@@ -150,7 +150,7 @@ mod L2TWAMMBridge {
             self.withdraw();
         } else if data.deposit_operation == 3 {
             self.emit(MessageReceived { message: data });
-            self.send_token_to_l1(data.buy_token.try_into().unwrap(), data.sender.try_into().unwrap(), data.amount.try_into().unwrap(), data);
+            self.send_token_to_l1(data.buy_token.try_into().unwrap(), data.sender.try_into().unwrap(), data.amount.try_into().unwrap());
         }
         
     }
@@ -227,9 +227,9 @@ mod L2TWAMMBridge {
             }
         }
 
-        fn send_token_to_l1(ref self: ContractState, l1_token: EthAddress, l1_recipient: EthAddress, amount: u256, message.MyData) {
+        fn send_token_to_l1(ref self: ContractState, l1_token: EthAddress, l1_recipient: EthAddress, amount: u256) {
             let token_bridge = ITokenBridgeDispatcher { contract_address: contract_address_const::<
-                message.token_bridge_address
+                0x0594c1582459ea03f77deaf9eb7e3917d6994a03c13405ba42867f83d85f085d
             >() };
             token_bridge.initiate_token_withdraw(l1_token, l1_recipient, amount);
         }
