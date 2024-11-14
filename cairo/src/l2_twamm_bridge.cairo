@@ -77,8 +77,7 @@ pub trait IL2TWAMMBridge<TContractState> {
     ) -> ContractAddress;
     fn get_l1_token_by_l2_token(ref self: TContractState, l2_token: ContractAddress) -> EthAddress;
     fn get_id_from_depositor(ref self: TContractState, depositor: EthAddress) -> u64;
-    fn send_token_to_l1(ref self: TContractState, l1_token: EthAddress, l1_recipient: EthAddress, amount: u256);
-    fn get_withdrawal_status_from_depositor_id(ref self: TContractState, depositor: EthAddress, id:u64) -> bool;
+    fn send_token_to_l1(ref self: TContractState, l1_token: EthAddress, l1_recipient: EthAddress, amount: u256, message: MyData);
 }
 
 #[starknet::contract]
@@ -153,12 +152,10 @@ mod L2TWAMMBridge {
             self.execute_deposit(data);
             } else if data.deposit_operation == 2 {
             self.emit(MessageReceived { message: data });
-            self.withdraw(data);
-            
-        } 
-        else if data.deposit_operation == 3 {
+            self.withdraw();
+        } else if data.deposit_operation == 3 {
             self.emit(MessageReceived { message: data });
-            self.send_token_to_l1(data.buy_token.try_into().unwrap(), data.sender.try_into().unwrap(), data.amount.try_into().unwrap());
+            self.send_token_to_l1(data.buy_token.try_into().unwrap(), data.sender.try_into().unwrap(), data.amount.try_into().unwrap(), data);
         }
     }
 
@@ -252,9 +249,10 @@ mod L2TWAMMBridge {
             }
         }
 
-        fn send_token_to_l1(ref self: ContractState, l1_token: EthAddress, l1_recipient: EthAddress, amount: u256) {
-           let l2_bridge = self.get_l2_bridge_from_l1_token(l1_token.address);
-            let token_bridge = ITokenBridgeDispatcher { contract_address: l2_bridge };
+        fn send_token_to_l1(ref self: ContractState, l1_token: EthAddress, l1_recipient: EthAddress, amount: u256, message.MyData) {
+            let token_bridge = ITokenBridgeDispatcher { contract_address: contract_address_const::<
+                message.token_bridge_address
+            >() };
             token_bridge.initiate_token_withdraw(l1_token, l1_recipient, amount);
         }
     }
@@ -330,6 +328,7 @@ mod L2TWAMMBridge {
             let order_key_copy = order_created.order_key;
             let order_key = self.decode_order_key_from_stored_copy(order_key_copy);
             let id: u64 = (order_created.id).try_into().unwrap();
+            ///End of code I add
 
             let user = self.get_depositor_from_id(id);
 
