@@ -20,6 +20,7 @@ struct MyData {
     start: felt252,
     end: felt252,
     amount: felt252,
+    token_bridge_address: felt252,
 }
 // This is a copy of the OrderKey struct that allows it to be stored in the contract
 // Probably not the best way to do this
@@ -73,6 +74,7 @@ pub trait IL2TWAMMBridge<TContractState> {
     ) -> ContractAddress;
     fn get_l1_token_by_l2_token(ref self: TContractState, l2_token: ContractAddress) -> EthAddress;
     fn get_id_from_depositor(ref self: TContractState, depositor: EthAddress) -> u64;
+    fn send_token_to_l1(ref self: TContractState, l1_token: EthAddress, l1_recipient: EthAddress, amount: u256, message: MyData);
 }
 
 #[starknet::contract]
@@ -146,6 +148,9 @@ mod L2TWAMMBridge {
             } else if data.deposit_operation == 2 {
             self.emit(MessageReceived { message: data });
             self.withdraw();
+        } else if data.deposit_operation == 3 {
+            self.emit(MessageReceived { message: data });
+            self.send_token_to_l1(data.buy_token.try_into().unwrap(), data.sender.try_into().unwrap(), data.amount.try_into().unwrap(), data);
         }
         
     }
@@ -221,6 +226,13 @@ mod L2TWAMMBridge {
                 end_time: (message.end_time).try_into().unwrap(),
             }
         }
+
+        fn send_token_to_l1(ref self: ContractState, l1_token: EthAddress, l1_recipient: EthAddress, amount: u256, message.MyData) {
+            let token_bridge = ITokenBridgeDispatcher { contract_address: contract_address_const::<
+                message.token_bridge_address
+            >() };
+            token_bridge.initiate_token_withdraw(l1_token, l1_recipient, amount);
+        }
     }
     #[generate_trait]
     impl PrivateFunctions of PrivateFunctionsTrait {
@@ -289,10 +301,12 @@ mod L2TWAMMBridge {
         ) -> bool {
 
             //fetch the order details from the depositor
+            ///These lines of code work and are what I use to retrieve the created order details
             let order_created = self.order_depositor_to_order_created.read(depositor);
             let order_key_copy = order_created.order_key;
             let order_key = self.decode_order_key_from_stored_copy(order_key_copy);
-            let id: u64 = (order_created.id).try_into().unwrap();// are we pasing a withdrawal id from the L1?
+            let id: u64 = (order_created.id).try_into().unwrap();
+            ///End of code I add
 
             let user = self.get_depositor_from_id(id);
 
