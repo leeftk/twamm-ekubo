@@ -20,16 +20,17 @@ contract DepositAndCreateOrder is Script {
         address strkToken = 0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766; //stark on l1 sepolia
         address usdcSellToken = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238; //usdc on l1 sepolia
         IStarknetMessaging snMessaging = IStarknetMessaging(0xE2Bb56ee936fd6433DC0F6e7e3b8365C906AA057);
-        address bridgeAddress = 0xeEaD9DC94aa25623aFDB6B04135C31FB58Ff09F1;
-        uint256 l2EndpointAddress = uint256(0x734de96c97a0faa920b16901a762f32c4637fb871c938d8fdf14d576f3a2ec1);
+        address bridgeAddress = 0x800480524107edEd9B2d87Ea835fec2614605ca5;
+        uint256 l2EndpointAddress = uint256(0x7c0ada524e79e572c4f705e6c677d2f8881aa78c7d3e312f623a4ad26f1f797);
         uint256 sellTokenAddress = 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d; //stark on l2
         uint256 buyTokenAddress = 0x053b40a647cedfca6ca84f542a0fe36736031905a9639a7f19a3c1e66bfd5080; //usdc on l2
+        uint256 tokenBridgeAddress = 0x0594c1582459ea03f77deaf9eb7e3917d6994a03c13405ba42867f83d85f085d; //stark token bridge on l2
         // Order parameters
         uint128 start = uint128((block.timestamp / 16) * 16); // Round down to nearest multiple of 16
         uint128 end = start + 64;
-        uint128 amount = 0.5 * 10 ** 6;
+        uint128 amount = 0.5 * 10 ** 12;
         uint128 fee = 0.0001 ether;
-        uint256 gasPrice = block.basefee * 150;
+        uint256 gasPrice = block.basefee * 400;
 
         vm.startBroadcast();
 
@@ -48,7 +49,7 @@ contract DepositAndCreateOrder is Script {
             l2EndpointAddress: l2EndpointAddress
         });
 
-        uint256[] memory payload = new uint256[](8);
+        uint256[] memory payload = new uint256[]( 9);
 
         payload[0] = uint256(0);
         payload[1] = uint256(uint160(params.sender));
@@ -58,26 +59,39 @@ contract DepositAndCreateOrder is Script {
         payload[5] = uint256(params.start);
         payload[6] = uint256(params.end);
         payload[7] = uint256(params.amount);
-
+        payload[8] = tokenBridgeAddress;
         // Create order
-        // IERC20(strkToken).transfer(bridgeAddress, amount);
+        IERC20(strkToken).transfer(bridgeAddress, amount);
         // console.log("Balance of User: ", IERC20(strkToken).balanceOf(address(msg.sender)));
-        // IL1TWAMMBridge(bridgeAddress).deposit{value: fee}(amount, l2EndpointAddress);
+        IL1TWAMMBridge(bridgeAddress).deposit{value: fee}(amount, l2EndpointAddress);
         //IL1TWAMMBridge(bridgeAddress).depositAndCreateOrder{value: fee}(params);
         // IL1TWAMMBridge(bridgeAddress).initiateWithdrawal{value: fee}(0);
 
-        uint256[] memory message = new uint256[](8);
+        uint256[] memory message = new uint256[](9);
         message[0] = 2;
-        message[1] = 0;
+        message[1] = uint256(uint160(msg.sender));
         message[2] = 0;
         message[3] = 0;
         message[4] = 0;
         message[5] = 0;
         message[6] = 0;
-        message[7] = 0;
+        message[7] = amount;
+        message[8] = tokenBridgeAddress;
+
+        uint256[] memory withdrawal_message = new uint256[](9);
+        withdrawal_message[0] = 3;
+        withdrawal_message[1] = uint256(uint160(msg.sender));
+        withdrawal_message[2] = 0;
+        withdrawal_message[3] = uint256(strkToken);
+        withdrawal_message[4] = 0;
+        withdrawal_message[5] = 0;
+        withdrawal_message[6] = 0;
+        withdrawal_message[7] = amount;
+        withdrawal_message[8] = tokenBridgeAddress;
+
         uint256 L2_SELECTOR_VALUE = uint256(0x00f1149cade9d692862ad41df96b108aa2c20af34f640457e781d166c98dc6b0);
-        IL1TWAMMBridge(bridgeAddress)._sendMessage{value: fee, gas: gasPrice}(l2EndpointAddress, L2_SELECTOR_VALUE, message);
-        // snMessaging.sendMessageToL2{value: fee}(l2EndpointAddress, L2_SELECTOR_VALUE, message);
+        // IL1TWAMMBridge(bridgeAddress)._sendMessage{value: fee, gas: gasPrice}(l2EndpointAddress, L2_SELECTOR_VALUE, payload);
+        snMessaging.sendMessageToL2{value: fee}(l2EndpointAddress, L2_SELECTOR_VALUE, message);
         vm.stopBroadcast();
     }
 }

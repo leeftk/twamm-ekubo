@@ -10,7 +10,7 @@ contract DeployL1TWAMMBridge is Script {
         address token = address(0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766);
         address starknetBridge = address(0xcE5485Cfb26914C5dcE00B9BAF0580364daFC7a4);
         address l2EkuboAddress = address(0x123);
-        uint256 l2EndpointAddress = uint256(0x734de96c97a0faa920b16901a762f32c4637fb871c938d8fdf14d576f3a2ec1);
+        uint256 l2EndpointAddress = uint256(0x7c0ada524e79e572c4f705e6c677d2f8881aa78c7d3e312f623a4ad26f1f797);
 
         address starknetRegistry = address(0xdc1564B4E0b554b26b2CFd2635B84A0777035d11);
 
