@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { OrderParams } from "./types/OrderParams.sol";
 import "forge-std/console.sol";
-import { IStarknetMessaging } from "./interfaces/IStarknetMessaging.sol";
+import {IStarknetMessaging} from "./interfaces/IStarknetMessaging.sol";
+import {OrderParams} from "./types/OrderParams.sol";
 
 interface IStarknetTokenBridge {
     function depositWithMessage(address token, uint256 amount, uint256 l2Recipient, uint256[] calldata message)
@@ -31,11 +31,12 @@ contract L1TWAMMBridge is Ownable {
     uint256 internal constant TIME_SPACING_SIZE = 16;
     uint256 internal constant LOG_SCALE_FACTOR = 4;
     uint256 internal constant DEPOSIT_OPERATION = 0;
-    uint256 internal constant WITHDRAWAL_OPERATION = 1;
+    uint256 internal constant WITHDRAWAL_OPERATION = 3;
     uint256 internal constant DEFAULT_NONCE = 1;
     uint256 internal constant WITHDRAWAL_PAYLOAD_SIZE = 8;
     uint256 internal constant DEPOSIT_PAYLOAD_SIZE = 7;
-    uint256 internal constant ON_RECEIVE_SELECTOR = uint256(0x00f1149cade9d692862ad41df96b108aa2c20af34f640457e781d166c98dc6b0);
+    uint256 internal constant ON_RECEIVE_SELECTOR =
+        uint256(0x00f1149cade9d692862ad41df96b108aa2c20af34f640457e781d166c98dc6b0);
 
     // State variables
     IERC20 public immutable token;
@@ -59,8 +60,7 @@ contract L1TWAMMBridge is Ownable {
     error InvalidBridge();
     error InvalidTime();
     error NotSupportedToken();
-
-   
+    error ZeroValue();
 
     constructor(
         address _token,
@@ -90,50 +90,34 @@ contract L1TWAMMBridge is Ownable {
         return bridge != address(0);
     }
 
-    function depositAndCreateOrder(
-        OrderParams memory params
-    ) external payable {
+    function depositAndCreateOrder(OrderParams memory params) external payable {
         //if (!validateBridge(address(token))) revert InvalidBridge();
-
+        if (msg.value == 0) revert ZeroValue();
         _validateTimeParams(params.start, params.end);
         _handleTokenTransfer(params.amount, address(token), address(starknetBridge));
-
-        uint256[] memory payload = _encodeDepositPayload(params);
-
-        starknetBridge.depositWithMessage{value: msg.value}(address(token), params.amount, l2EndpointAddress, payload);
+        starknetBridge.deposit{value: msg.value}(address(token), params.amount, l2EndpointAddress);
+        uint256[] memory payload = _encodeDepositPayload(
+            msg.sender,
+            params.sellToken,
+            params.buyToken,
+            params.fee,
+            params.start,
+            params.end,
+            params.amount,
+            uint256(uint160(address(starknetBridge)))
+        );
+        _sendMessage(l2EndpointAddress, ON_RECEIVE_SELECTOR, payload);
 
         emit DepositAndCreateOrder(msg.sender, l2EndpointAddress, params.amount, DEFAULT_NONCE);
     }
 
-    // function initiateWithdrawal(address sellToken, address l1Recipient, uint128 amount) external payable onlyOwner {
-    //     if (!validateBridge(address(token))) revert InvalidBridge();
+    function initiateWithdrawal(uint256 amount) external payable {
+        uint256[] memory message =
+            _encodeWithdrawalPayload(msg.sender, address(token), amount, uint256(uint160(address(starknetBridge))));
 
-    //     //uint256[] memory payload = _encodeWithdrawalPayload(sellToken, l1Recipient, amount, 0);
-    //     starknetBridge.depositWithMessage{value: msg.value}(address(token), 0, l2EndpointAddress, payload);
-
-    //     emit WithdrawalInitiated(l1Recipient, amount);
-    // }
-
-    function removeSupportedToken(address _token) external onlyOwner {
-        supportedTokens[_token] = false;
-        emit SupportedTokenRemoved(_token);
-    }
-    function deposit(uint256 amount, uint256 l2Recipient) external payable {
-        token.approve(address(starknetBridge), amount);
-        starknetBridge.deposit{value: msg.value}(address(token), amount, l2EndpointAddress);
-    }
-    function depositWithMessage(uint256 amount, uint256 l2Recipient, uint256[] calldata message) external payable {
-        starknetBridge.depositWithMessage(address(token), amount, l2Recipient, message);
-    }
-    function initiateWithdrawal(uint256 tokenId) external payable {
-        //if (!validateBridge(address(token))) revert InvalidBridge();
-        uint256[] memory message = new uint256[](1);
-        message[0] = 2;
-    
         _sendMessage(l2EndpointAddress, ON_RECEIVE_SELECTOR, message);
-        
 
-        emit WithdrawalInitiated(msg.sender, tokenId);
+        emit WithdrawalInitiated(msg.sender, amount);
     }
 
     /// @notice Sets the L2 endpoint address
@@ -157,19 +141,9 @@ contract L1TWAMMBridge is Ownable {
             revert InvalidTime();
         }
     }
-      function _sendMessage(
-        uint256 contractAddress,
-        uint256 selector,
-        uint256[] memory payload
-    )
-        public
-        payable
-    {
-        snMessaging.sendMessageToL2{value: msg.value}(
-            contractAddress,
-            selector,
-            payload
-        );
+
+    function _sendMessage(uint256 contractAddress, uint256 selector, uint256[] memory payload) public payable {
+        snMessaging.sendMessageToL2{value: msg.value}(contractAddress, selector, payload);
     }
 
     function _handleTokenTransfer(uint256 amount, address tokenAddress, address bridge) private {
@@ -178,33 +152,50 @@ contract L1TWAMMBridge is Ownable {
         IERC20(tokenAddress).approve(bridge, amount);
     }
 
-    function _encodeDepositPayload(OrderParams memory params) internal pure returns (uint256[] memory) {
-        uint256[] memory payload = new uint256[](DEPOSIT_PAYLOAD_SIZE);
-        
-        payload[0] = DEPOSIT_OPERATION;
-        payload[1] = uint256(uint160(params.sender));
-        payload[2] = uint256(params.sellToken);
-        payload[3] = uint256(params.buyToken);
-        payload[4] = uint256(params.fee);
-        payload[5] = uint256(params.start);
-        payload[6] = uint256(params.end);
+    function _encodeDepositPayload(
+        address sender,
+        uint256 sellToken,
+        uint256 buyToken,
+        uint256 fee,
+        uint128 start,
+        uint128 end,
+        uint128 amount,
+        uint256 tokenBridgeAddress
+    ) internal pure returns (uint256[] memory) {
+        uint256[] memory payload = new uint256[](9);
+
+        payload[0] = uint256(0); // deposit operation
+        payload[1] = uint256(uint160(sender));
+        payload[2] = sellToken; // already uint256
+        payload[3] = buyToken; // already uint256
+        payload[4] = uint256(fee);
+        payload[5] = uint256(start);
+        payload[6] = uint256(end);
+        payload[7] = uint256(amount);
+        payload[8] = tokenBridgeAddress; // already uint256
 
         return payload;
     }
 
-    // function _encodeWithdrawalPayload(address sellToken, address l1Recipient, uint128 amount, uint256 message)
-    //     internal
-    //     pure
-    //     returns (uint256[] memory)
-    // {
-    //     uint256[] memory payload = new uint256[](WITHDRAWAL_PAYLOAD_SIZE);
-    //     payload[0] = WITHDRAWAL_OPERATION;
-    //     payload[1] = uint256(params.sellToken);
-    //     payload[2] = uint256(uint160(l1Recipient));
-    //     payload[3] = uint256(amount);
-    //     payload[4] = message;
-    //     return payload;
-    // }
+    function _encodeWithdrawalPayload(address sender, address l1Token, uint256 amount, uint256 tokenBridgeAddress)
+        internal
+        pure
+        returns (uint256[] memory)
+    {
+        uint256[] memory payload = new uint256[](9);
+
+        payload[0] = WITHDRAWAL_OPERATION;
+        payload[1] = uint256(uint160(sender));
+        payload[2] = 0; // placeholder
+        payload[3] = uint256(uint160(l1Token));
+        payload[4] = 0; // placeholder
+        payload[5] = 0; // placeholder
+        payload[6] = 0; // placeholder
+        payload[7] = amount;
+        payload[8] = tokenBridgeAddress;
+
+        return payload;
+    }
 
     function _isTimeValid(uint256 now_, uint256 time) internal pure returns (bool) {
         uint256 step;
@@ -233,5 +224,23 @@ contract L1TWAMMBridge is Ownable {
     // External view functions
     function isTimeValidExternal(uint256 start, uint256 end) external view returns (bool) {
         return _isTimeValid(start, end);
+    }
+
+
+    // -----------------------------------------
+    // Functions strictly for testing
+
+    function removeSupportedToken(address _token) external onlyOwner {
+        supportedTokens[_token] = false;
+        emit SupportedTokenRemoved(_token);
+    }
+
+    function deposit(uint256 amount, uint256 l2Recipient) external payable {
+        token.approve(address(starknetBridge), amount);
+        starknetBridge.deposit(address(token), amount, l2EndpointAddress);
+    }
+
+    function depositWithMessage(uint256 amount, uint256 l2Recipient, uint256[] calldata message) external payable {
+        starknetBridge.depositWithMessage{value: msg.value}(address(token), amount, l2Recipient, message);
     }
 }
