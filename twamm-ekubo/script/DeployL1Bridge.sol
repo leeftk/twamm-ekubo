@@ -6,7 +6,6 @@ import {L1TWAMMBridge} from "../src/L1TWAMMBridge.sol";
 
 contract DeployL1TWAMMBridge is Script {
     function run() public returns (L1TWAMMBridge) {
-     
         address token = address(0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766);
         address starknetBridge = address(0xcE5485Cfb26914C5dcE00B9BAF0580364daFC7a4);
         address l2EkuboAddress = address(0x123);
@@ -16,16 +15,11 @@ contract DeployL1TWAMMBridge is Script {
 
         vm.startBroadcast();
 
-        L1TWAMMBridge bridge = new L1TWAMMBridge(
-            token,
-            starknetBridge,
-            l2EkuboAddress,
-            l2EndpointAddress,
-            starknetRegistry
-        );
+        L1TWAMMBridge bridge =
+            new L1TWAMMBridge(token, starknetBridge, l2EkuboAddress, l2EndpointAddress, starknetRegistry);
 
         vm.stopBroadcast();
 
         return bridge;
     }
-} 
+}

@@ -49,7 +49,7 @@ contract DepositAndCreateOrder is Script {
             l2EndpointAddress: l2EndpointAddress
         });
 
-        uint256[] memory payload = new uint256[]( 9);
+        uint256[] memory payload = new uint256[](9);
         // deposit
         payload[0] = uint256(0);
         payload[1] = uint256(uint160(params.sender));
@@ -64,7 +64,7 @@ contract DepositAndCreateOrder is Script {
         IERC20(strkToken).transfer(bridgeAddress, amount);
         // console.log("Balance of User: ", IERC20(strkToken).balanceOf(address(msg.sender)));
         IL1TWAMMBridge(bridgeAddress).deposit{value: fee}(amount, l2EndpointAddress);
-        //withdraw 
+        //withdraw
         uint256[] memory message = new uint256[](9);
         message[0] = 0;
         message[1] = uint256(uint160(msg.sender));
@@ -92,4 +92,5 @@ contract DepositAndCreateOrder is Script {
         snMessaging.sendMessageToL2{value: fee}(l2EndpointAddress, L2_SELECTOR_VALUE, withdrawal_message);
         vm.stopBroadcast();
     }
+
 }

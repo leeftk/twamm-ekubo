@@ -33,12 +33,7 @@ contract L1TWAMMBridgeTest is Test {
     uint128 public end = start + DEFAULT_DURATION;
 
     // === EVENTS ===
-    event DepositAndCreateOrder(
-        address indexed l1Sender, 
-        uint256 indexed l2Recipient, 
-        uint256 amount, 
-        uint256 nonce
-    );
+    event DepositAndCreateOrder(address indexed l1Sender, uint256 indexed l2Recipient, uint256 amount, uint256 nonce);
     event DepositWithMessage(
         address indexed sender,
         address indexed token,
@@ -98,7 +93,7 @@ contract L1TWAMMBridgeTest is Test {
 
         vm.expectEmit(true, true, false, true);
         emit DepositAndCreateOrder(address(user), l2EndpointAddress, DEFAULT_AMOUNT, expectedNonce);
-        
+
         OrderParams memory order = _createDefaultOrder();
         bridge.depositAndCreateOrder{value: DEFAULT_FEE}(order);
         vm.stopPrank();
@@ -125,8 +120,8 @@ contract L1TWAMMBridgeTest is Test {
 
         vm.prank(bridge.owner());
         // bridge.initiateWithdrawal{value: DEFAULT_FEE}(
-        //     address(token), 
-        //     l1Recipient, 
+        //     address(token),
+        //     l1Recipient,
         //     DEFAULT_AMOUNT
         // );
     }
@@ -136,7 +131,7 @@ contract L1TWAMMBridgeTest is Test {
 
         vm.expectRevert();
         vm.prank(user);
-            // bridge.initiateWithdrawal(address(token), l1Recipient, DEFAULT_AMOUNT);
+        // bridge.initiateWithdrawal(address(token), l1Recipient, DEFAULT_AMOUNT);
     }
 
     function testInvalidTimeRange() public {
@@ -170,12 +165,7 @@ contract L1TWAMMBridgeTest is Test {
         uint256 expectedNonce = starknetBridge.mockNonce();
 
         vm.expectEmit(true, true, false, true);
-        emit DepositAndCreateOrder(
-            user,
-            l2EndpointAddress,
-            DEFAULT_AMOUNT,
-            expectedNonce
-        );
+        emit DepositAndCreateOrder(user, l2EndpointAddress, DEFAULT_AMOUNT, expectedNonce);
 
         OrderParams memory order = _createDefaultOrder();
         bridge.depositAndCreateOrder{value: DEFAULT_FEE}(order);
