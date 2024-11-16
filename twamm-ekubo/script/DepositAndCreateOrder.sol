@@ -21,7 +21,7 @@ contract DepositAndCreateOrder is Script {
         address usdcBuyToken = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238; //usdc on l1 sepolia
         IStarknetMessaging snMessaging = IStarknetMessaging(0xE2Bb56ee936fd6433DC0F6e7e3b8365C906AA057);
         address bridgeAddress = 0xa1749d1d72928b9b1c33F9B289D837581347fbdF;
-        uint256 l2EndpointAddress = uint256(0x17b7a786f788b022067f7ed23d6183c3ee6cb2d4e463e1835821a2b8f22cdab);
+        uint256 l2EndpointAddress = uint256(0x1e5e5ddc6e545240a1f47645ccc873562d72586bc7e8861e70dead0ad64c42b);
         uint256 sellTokenAddress = 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d; //stark on l2
         uint256 buyTokenAddress = 0x053b40a647cedfca6ca84f542a0fe36736031905a9639a7f19a3c1e66bfd5080; //usdc on l2
         uint256 sellTokenBridgeAddress = 0x0594c1582459ea03f77deaf9eb7e3917d6994a03c13405ba42867f83d85f085d; //strk token bridge on l2
@@ -65,7 +65,7 @@ contract DepositAndCreateOrder is Script {
         // IERC20(strkToken).transfer(bridgeAddress, amount);
         // console.log("Balance of User: ", IERC20(strkToken).balanceOf(address(msg.sender)));
         // IL1TWAMMBridge(0xcE5485Cfb26914C5dcE00B9BAF0580364daFC7a4).deposit{value: fee}(amount, l2EndpointAddress);
-        
+
         ///withdraw
         uint256[] memory withdrawal_message = new uint256[](9);
         withdrawal_message[0] = 2;

@@ -358,7 +358,7 @@ mod L2TWAMMBridge {
             let id: u64 = (order_created.id).try_into().unwrap();
             let user = self.get_depositor_from_id(id);
 
-            // assert(user == depositor, ERROR_ZERO_AMOUNT);
+            assert(user == depositor, ERROR_ZERO_AMOUNT);
 
             let amount_sold = self.withdraw_proceeds_from_sale_to(id, order_key);
 
