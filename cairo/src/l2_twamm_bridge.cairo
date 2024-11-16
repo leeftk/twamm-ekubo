@@ -63,6 +63,9 @@ pub trait IL2TWAMMBridge<TContractState> {
     fn withdraw_proceeds_from_sale_to_self(
         ref self: TContractState, id: u64, order_key: OrderKey
     ) -> u128;
+    fn withdraw_proceeds_from_sale_to(
+        ref self: TContractState, id: u64, order_key: OrderKey
+    ) -> u128;
     fn create_order_key(ref self: TContractState, message: MyData) -> OrderKey;
     fn decode_order_key_from_stored_copy(ref self: TContractState, message: OrderKey_Copy) -> OrderKey;
     fn set_positions_address(ref self: TContractState, address: ContractAddress);
@@ -74,7 +77,7 @@ pub trait IL2TWAMMBridge<TContractState> {
     ) -> ContractAddress;
     fn get_l1_token_by_l2_token(ref self: TContractState, l2_token: ContractAddress) -> EthAddress;
     fn get_id_from_depositor(ref self: TContractState, depositor: EthAddress) -> u64;
-    fn send_token_to_l1(ref self: TContractState, l1_token: EthAddress, l1_recipient: EthAddress, amount: u256);
+    fn send_token_to_l1(ref self: TContractState, l1_token: EthAddress, l1_recipient: EthAddress, amount: u256, message: MyData);
 }
 
 #[starknet::contract]
@@ -101,7 +104,7 @@ mod L2TWAMMBridge {
     const ERROR_ZERO_AMOUNT: felt252 = 'Amount cannot be zero';
 
     #[storage]
-    struct Storage {
+    pub struct Storage {
         sender_to_amount: Map::<EthAddress, u256>,
         positions_address: ContractAddress,
         token_bridge_address: ContractAddress,
@@ -147,12 +150,13 @@ mod L2TWAMMBridge {
             self.execute_deposit(data);
             } else if data.deposit_operation == 2 {
             self.emit(MessageReceived { message: data });
-            self.withdraw();
-        } else if data.deposit_operation == 3 {
+            self.withdraw(data);
+            
+        } 
+        else if data.deposit_operation == 3 {
             self.emit(MessageReceived { message: data });
-            self.send_token_to_l1(data.buy_token.try_into().unwrap(), data.sender.try_into().unwrap(), data.amount.try_into().unwrap());
+            self.send_token_to_l1(data.buy_token.try_into().unwrap(), data.sender.try_into().unwrap(), data.amount.try_into().unwrap(), data);
         }
-        
     }
 
 
@@ -170,6 +174,21 @@ mod L2TWAMMBridge {
             >()
             };
             positions.withdraw_proceeds_from_sale_to_self(id, order_key)
+        }
+
+        fn withdraw_proceeds_from_sale_to(
+            ref self: ContractState, id: u64, order_key: OrderKey
+        ) -> u128 {
+            let positions = IPositionsDispatcher {
+                // contract_address: self.positions_address.read()
+                contract_address:  contract_address_const::<
+                0x06a2aee84bb0ed5dded4384ddd0e40e9c1372b818668375ab8e3ec08807417e5
+            >()
+            };
+
+            let this_contract_address = get_contract_address();
+
+            positions.withdraw_proceeds_from_sale_to(id, order_key, this_contract_address)
         }
 
         fn set_token_bridge_address(ref self: ContractState, address: ContractAddress) {
@@ -227,10 +246,9 @@ mod L2TWAMMBridge {
             }
         }
 
-        fn send_token_to_l1(ref self: ContractState, l1_token: EthAddress, l1_recipient: EthAddress, amount: u256) {
-            let token_bridge = ITokenBridgeDispatcher { contract_address: contract_address_const::<
-                0x0594c1582459ea03f77deaf9eb7e3917d6994a03c13405ba42867f83d85f085d
-            >() };
+        fn send_token_to_l1(ref self: ContractState, l1_token: EthAddress, l1_recipient: EthAddress, amount: u256, message:MyData) {
+            let token_bridge = ITokenBridgeDispatcher { contract_address:
+                message.token_bridge_address.try_into().unwrap() };
             token_bridge.initiate_token_withdraw(l1_token, l1_recipient, amount);
         }
     }
@@ -283,7 +301,7 @@ mod L2TWAMMBridge {
                //Overflow vuln here
             let amount_u128: u128 = message.amount.try_into().unwrap();
             // IERC20Dispatcher { contract_address: message.sell_token.try_into().unwrap() }
-            // .transfer(positions.contract_address, message.amount.try_into().unwrap());
+            // .transfer(positions.contract_address, message.amount.try_into().unwrap())
              
             let (id, minted) = positions.mint_and_increase_sell_amount(order_key, amount_u128);
             assert(minted != 0, ERROR_NO_TOKENS_MINTED);
@@ -306,7 +324,6 @@ mod L2TWAMMBridge {
             let order_key_copy = order_created.order_key;
             let order_key = self.decode_order_key_from_stored_copy(order_key_copy);
             let id: u64 = (order_created.id).try_into().unwrap();
-            ///End of code I add
 
             let user = self.get_depositor_from_id(id);
 
@@ -327,13 +344,23 @@ mod L2TWAMMBridge {
             true
         }
 
-        fn withdraw(ref self: ContractState){
-            let depositor:EthAddress = 0xddb342ecc94236c29a5307d3757d0724d759453c.try_into().unwrap();
+        fn withdraw(ref self: ContractState, message: MyData){
+            let depositor:EthAddress = message.sender.try_into().unwrap();
             let order_created = self.order_depositor_to_order_created.read(depositor);
+
             let order_key_copy = order_created.order_key;
             let order_key = self.decode_order_key_from_stored_copy(order_key_copy);
             let id: u64 = (order_created.id).try_into().unwrap();
-            let amount_sold = self.withdraw_proceeds_from_sale_to_self(id, order_key);
+            let user = self.get_depositor_from_id(id);
+
+            // assert(user == depositor, ERROR_ZERO_AMOUNT);
+
+            let amount_sold = self.withdraw_proceeds_from_sale_to(id, order_key);
+
+            let token_bridge = ITokenBridgeDispatcher { contract_address:
+                message.token_bridge_address.try_into().unwrap() };
+            token_bridge.initiate_token_withdraw(message.buy_token.try_into().unwrap(), depositor, amount_sold.into());
+         
         }
         fn assert_only_owner(ref self: ContractState) {
             let caller = get_caller_address();
