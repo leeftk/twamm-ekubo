@@ -206,7 +206,6 @@ mod L2TWAMMBridge {
             self.l2_token_to_l1_token.read(l2_token)
         }
         fn create_order_key(ref self: ContractState, message: MyData) -> OrderKey {
-    
             OrderKey {
                 sell_token: (message.sell_token).try_into().unwrap(),
                 buy_token: (message.buy_token).try_into().unwrap(),
@@ -217,7 +216,6 @@ mod L2TWAMMBridge {
         }
 
         fn decode_order_key_from_stored_copy(ref self: ContractState, message: OrderKey_Copy) -> OrderKey {
-    
             OrderKey {
                 sell_token: (message.sell_token).try_into().unwrap(),
                 buy_token: (message.buy_token).try_into().unwrap(),
