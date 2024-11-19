@@ -31,7 +31,7 @@ contract L1TWAMMBridge is Ownable {
     uint256 internal constant TIME_SPACING_SIZE = 16;
     uint256 internal constant LOG_SCALE_FACTOR = 4;
     uint256 internal constant DEPOSIT_OPERATION = 0;
-    uint256 internal constant WITHDRAWAL_OPERATION = 3;
+    uint256 internal constant WITHDRAWAL_OPERATION = 2;
     uint256 internal constant DEFAULT_NONCE = 1;
     uint256 internal constant WITHDRAWAL_PAYLOAD_SIZE = 8;
     uint256 internal constant DEPOSIT_PAYLOAD_SIZE = 7;
@@ -94,8 +94,9 @@ contract L1TWAMMBridge is Ownable {
         //if (!validateBridge(address(token))) revert InvalidBridge();
         if (msg.value == 0) revert ZeroValue();
         _validateTimeParams(params.start, params.end);
+        // address tokenBridge = starknetRegistry.getBridge(address(token));
         _handleTokenTransfer(params.amount, address(token), address(starknetBridge));
-        starknetBridge.deposit{value: msg.value}(address(token), params.amount, l2EndpointAddress);
+        IStarknetTokenBridge(starknetBridge).deposit{value: msg.value}(address(token), params.amount, l2EndpointAddress);
         uint256[] memory payload = _encodeDepositPayload(
             msg.sender,
             params.sellToken,
@@ -111,9 +112,9 @@ contract L1TWAMMBridge is Ownable {
         emit DepositAndCreateOrder(msg.sender, l2EndpointAddress, params.amount, DEFAULT_NONCE);
     }
 
-    function initiateWithdrawal(uint256 amount) external payable {
+    function initiateWithdrawal(uint256 amount, address l1_token) external payable {
         uint256[] memory message =
-            _encodeWithdrawalPayload(msg.sender, address(token), amount, uint256(uint160(address(starknetBridge))));
+            _encodeWithdrawalPayload(msg.sender, l1_token, amount);
 
         _sendMessage(l2EndpointAddress, ON_RECEIVE_SELECTOR, message);
 
@@ -177,7 +178,7 @@ contract L1TWAMMBridge is Ownable {
         return payload;
     }
 
-    function _encodeWithdrawalPayload(address sender, address l1Token, uint256 amount, uint256 tokenBridgeAddress)
+    function _encodeWithdrawalPayload(address sender, address l1Token, uint256 amount)
         internal
         pure
         returns (uint256[] memory)
@@ -192,7 +193,7 @@ contract L1TWAMMBridge is Ownable {
         payload[5] = 0; // placeholder
         payload[6] = 0; // placeholder
         payload[7] = amount;
-        payload[8] = tokenBridgeAddress;
+        payload[8] = 0;
 
         return payload;
     }
