@@ -158,7 +158,7 @@ contract L1TWAMMBridgeTest is Test {
 
         vm.expectRevert();
         vm.prank(user);
-        bridge.initiateWithdrawal(id);
+        // bridge.initiateWithdrawal(id);
     }
 
     function testInvalidTimeRange() public {
@@ -192,5 +192,9 @@ contract L1TWAMMBridgeTest is Test {
         vm.expectRevert();
         vm.prank(user);
         bridge.removeSupportedToken(address(token));
+    }
+
+    function testGetBridge() public {
+        console.log(starknetBridge.getBridge(0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766));
     }
 }

@@ -10,7 +10,7 @@ import {IStarknetMessaging} from "../src/interfaces/IStarknetMessaging.sol";
 interface IL1TWAMMBridge {
     function depositAndCreateOrder(OrderParams memory params) external payable;
     function deposit(uint256 amount, uint256 l2EndpointAddress) external payable;
-    function initiateWithdrawal(uint256 tokenId) external payable;
+    function initiateWithdrawal(uint256 amount, address l1_token) external payable;
     function _sendMessage(uint256 contractAddress, uint256 selector, uint256[] memory payload) external payable;
 }
 
@@ -20,8 +20,8 @@ contract DepositAndCreateOrder is Script {
         address strkToken = 0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766; //stark on l1 sepolia
         address usdcBuyToken = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238; //usdc on l1 sepolia
         IStarknetMessaging snMessaging = IStarknetMessaging(0xE2Bb56ee936fd6433DC0F6e7e3b8365C906AA057);
-        address bridgeAddress = 0xa1749d1d72928b9b1c33F9B289D837581347fbdF;
-        uint256 l2EndpointAddress = uint256(0x1e5e5ddc6e545240a1f47645ccc873562d72586bc7e8861e70dead0ad64c42b);
+        address bridgeAddress = 0x4F15BC561C47B12D232aebA8dfb8C21100062c65;
+        uint256 l2EndpointAddress = uint256(0x429f7a4bd4de9fc98a94cec9163caf6f50a5d7fcec583fa30d2d9bb33a93663);
         uint256 sellTokenAddress = 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d; //stark on l2
         uint256 buyTokenAddress = 0x053b40a647cedfca6ca84f542a0fe36736031905a9639a7f19a3c1e66bfd5080; //usdc on l2
         uint256 sellTokenBridgeAddress = 0x0594c1582459ea03f77deaf9eb7e3917d6994a03c13405ba42867f83d85f085d; //strk token bridge on l2
@@ -67,20 +67,20 @@ contract DepositAndCreateOrder is Script {
         // IL1TWAMMBridge(0xcE5485Cfb26914C5dcE00B9BAF0580364daFC7a4).deposit{value: fee}(amount, l2EndpointAddress);
 
         ///withdraw
-        uint256[] memory withdrawal_message = new uint256[](9);
-        withdrawal_message[0] = 2;
-        withdrawal_message[1] = uint256(uint160(msg.sender));
-        withdrawal_message[2] = 0;
-        withdrawal_message[3] = uint256(uint160(usdcBuyToken));
-        withdrawal_message[4] = 0;
-        withdrawal_message[5] = 0;
-        withdrawal_message[6] = 0;
-        withdrawal_message[7] = amount;
-        withdrawal_message[8] = buyTokenBridgeAddress;
+        // uint256[] memory withdrawal_message = new uint256[](9);
+        // withdrawal_message[0] = 2;
+        // withdrawal_message[1] = uint256(uint160(msg.sender));
+        // withdrawal_message[2] = 0;
+        // withdrawal_message[3] = uint256(uint160(usdcBuyToken));
+        // withdrawal_message[4] = 0;
+        // withdrawal_message[5] = 0;
+        // withdrawal_message[6] = 0;
+        // withdrawal_message[7] = amount;
+        // withdrawal_message[8] = buyTokenBridgeAddress;
 
         uint256 L2_SELECTOR_VALUE = uint256(0x00f1149cade9d692862ad41df96b108aa2c20af34f640457e781d166c98dc6b0);
-        // IL1TWAMMBridge(bridgeAddress)._sendMessage{value: fee, gas: gasPrice}(l2EndpointAddress, L2_SELECTOR_VALUE, payload);
-        snMessaging.sendMessageToL2{value: fee}(l2EndpointAddress, L2_SELECTOR_VALUE, withdrawal_message);
+        IL1TWAMMBridge(bridgeAddress).initiateWithdrawal{value: fee}(amount, 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238);
+        // snMessaging.sendMessageToL2{value: fee}(l2EndpointAddress, L2_SELECTOR_VALUE, payload);
         vm.stopBroadcast();
     }
 
