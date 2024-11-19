@@ -63,6 +63,9 @@ pub trait IL2TWAMMBridge<TContractState> {
     fn withdraw_proceeds_from_sale_to_self(
         ref self: TContractState, id: u64, order_key: OrderKey
     ) -> u128;
+    fn withdraw_proceeds_from_sale_to(
+        ref self: TContractState, id: u64, order_key: OrderKey
+    ) -> u128;
     fn create_order_key(ref self: TContractState, message: MyData) -> OrderKey;
     fn decode_order_key_from_stored_copy(ref self: TContractState, message: OrderKey_Copy) -> OrderKey;
     fn set_positions_address(ref self: TContractState, address: ContractAddress);
@@ -75,6 +78,7 @@ pub trait IL2TWAMMBridge<TContractState> {
     fn get_l1_token_by_l2_token(ref self: TContractState, l2_token: ContractAddress) -> EthAddress;
     fn get_id_from_depositor(ref self: TContractState, depositor: EthAddress) -> u64;
     fn send_token_to_l1(ref self: TContractState, l1_token: EthAddress, l1_recipient: EthAddress, amount: u256);
+    fn get_withdrawal_status_from_depositor_id(ref self: TContractState, depositor: EthAddress, id:u64) -> bool;
 }
 
 #[starknet::contract]
@@ -99,14 +103,16 @@ mod L2TWAMMBridge {
     const ERROR_INVALID_ADDRESS: felt252 = 'Invalid address';
     const ERROR_UNAUTHORIZED: felt252 = 'Unauthorized';
     const ERROR_ZERO_AMOUNT: felt252 = 'Amount cannot be zero';
+    const ALREADY_WITHDRAWN: felt252 = 'Order has been withdrawn';
 
     #[storage]
-    struct Storage {
+    pub struct Storage {
         sender_to_amount: Map::<EthAddress, u256>,
         positions_address: ContractAddress,
         token_bridge_address: ContractAddress,
         order_id_to_depositor: Map::<u64, EthAddress>,
         order_depositor_to_id: Map::<EthAddress, u64>,
+        order_depositor_to_id_to_withdrawal_status: Map::<EthAddress, Map<u64, bool>>,
         l2_bridge_to_l2_token: Map::<ContractAddress, ContractAddress>,
         l2_token_to_l1_token: Map::<ContractAddress, EthAddress>,
         contract_owner: ContractAddress,
@@ -147,12 +153,13 @@ mod L2TWAMMBridge {
             self.execute_deposit(data);
             } else if data.deposit_operation == 2 {
             self.emit(MessageReceived { message: data });
-            self.withdraw();
-        } else if data.deposit_operation == 3 {
+            self.withdraw(data);
+            
+        } 
+        else if data.deposit_operation == 3 {
             self.emit(MessageReceived { message: data });
             self.send_token_to_l1(data.buy_token.try_into().unwrap(), data.sender.try_into().unwrap(), data.amount.try_into().unwrap());
         }
-        
     }
 
 
@@ -172,6 +179,21 @@ mod L2TWAMMBridge {
             positions.withdraw_proceeds_from_sale_to_self(id, order_key)
         }
 
+        fn withdraw_proceeds_from_sale_to(
+            ref self: ContractState, id: u64, order_key: OrderKey
+        ) -> u128 {
+            let positions = IPositionsDispatcher {
+                // contract_address: self.positions_address.read()
+                contract_address:  contract_address_const::<
+                0x06a2aee84bb0ed5dded4384ddd0e40e9c1372b818668375ab8e3ec08807417e5
+            >()
+            };
+
+            let this_contract_address = get_contract_address();
+
+            positions.withdraw_proceeds_from_sale_to(id, order_key, this_contract_address)
+        }
+
         fn set_token_bridge_address(ref self: ContractState, address: ContractAddress) {
             self.assert_only_owner();
             self.token_bridge_address.write(address);
@@ -187,6 +209,9 @@ mod L2TWAMMBridge {
         }
         fn get_id_from_depositor(ref self: ContractState, depositor: EthAddress) -> u64 {
             self.order_depositor_to_id.read(depositor)
+        }
+        fn get_withdrawal_status_from_depositor_id(ref self: ContractState, depositor: EthAddress, id: u64) -> bool {
+            self.order_depositor_to_id_to_withdrawal_status.entry(depositor).entry(id).read()
         }
 
         fn get_l2_bridge_by_l2_token(
@@ -226,9 +251,8 @@ mod L2TWAMMBridge {
         }
 
         fn send_token_to_l1(ref self: ContractState, l1_token: EthAddress, l1_recipient: EthAddress, amount: u256) {
-            let token_bridge = ITokenBridgeDispatcher { contract_address: contract_address_const::<
-                0x0594c1582459ea03f77deaf9eb7e3917d6994a03c13405ba42867f83d85f085d
-            >() };
+           let l2_bridge = self.get_l2_bridge_from_l1_token(l1_token.address);
+            let token_bridge = ITokenBridgeDispatcher { contract_address: l2_bridge };
             token_bridge.initiate_token_withdraw(l1_token, l1_recipient, amount);
         }
     }
@@ -281,7 +305,7 @@ mod L2TWAMMBridge {
                //Overflow vuln here
             let amount_u128: u128 = message.amount.try_into().unwrap();
             // IERC20Dispatcher { contract_address: message.sell_token.try_into().unwrap() }
-            // .transfer(positions.contract_address, message.amount.try_into().unwrap());
+            // .transfer(positions.contract_address, message.amount.try_into().unwrap())
              
             let (id, minted) = positions.mint_and_increase_sell_amount(order_key, amount_u128);
             assert(minted != 0, ERROR_NO_TOKENS_MINTED);
@@ -304,7 +328,6 @@ mod L2TWAMMBridge {
             let order_key_copy = order_created.order_key;
             let order_key = self.decode_order_key_from_stored_copy(order_key_copy);
             let id: u64 = (order_created.id).try_into().unwrap();
-            ///End of code I add
 
             let user = self.get_depositor_from_id(id);
 
@@ -325,14 +348,59 @@ mod L2TWAMMBridge {
             true
         }
 
-        fn withdraw(ref self: ContractState){
-            let depositor:EthAddress = 0xddb342ecc94236c29a5307d3757d0724d759453c.try_into().unwrap();
+        fn withdraw(ref self: ContractState, message: MyData){
+            let depositor:EthAddress = message.sender.try_into().unwrap();
             let order_created = self.order_depositor_to_order_created.read(depositor);
+
             let order_key_copy = order_created.order_key;
             let order_key = self.decode_order_key_from_stored_copy(order_key_copy);
             let id: u64 = (order_created.id).try_into().unwrap();
-            let amount_sold = self.withdraw_proceeds_from_sale_to_self(id, order_key);
+            let user = self.get_depositor_from_id(id);
+            let withdrawal_status = self.get_withdrawal_status_from_depositor_id(depositor, id);
+
+            assert(user == depositor, ERROR_ZERO_AMOUNT);
+
+            assert(withdrawal_status == false, ERROR_ZERO_AMOUNT);
+
+            let amount_sold = self.withdraw_proceeds_from_sale_to(id, order_key);
+
+            let token_bridge = ITokenBridgeDispatcher { contract_address:
+                message.token_bridge_address.try_into().unwrap() };
+            token_bridge.initiate_token_withdraw(message.buy_token.try_into().unwrap(), depositor, amount_sold.into());
+         
         }
+
+        fn get_l2_bridge_from_l1_token(ref self: ContractState, tokenAddress: felt252) -> ContractAddress {
+            //ETH
+            if tokenAddress == 0x0000000000000000000000000000000000455448 {
+                contract_address_const::<0x04c5772d1914fe6ce891b64eb35bf3522aeae1315647314aac58b01137607f3f>()
+            }
+            //STRK 
+            else if tokenAddress == 0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766 {
+                contract_address_const::<0x0594c1582459ea03f77deaf9eb7e3917d6994a03c13405ba42867f83d85f085d>()
+            }
+            // USDC
+            else if tokenAddress == 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238 {
+                contract_address_const::<0x0028729b12ce1140cbc1e7cbc7245455d3c15fa0c7f5d2e9fc8e0441567f6b50>()
+            }
+            //USDT
+             else if tokenAddress == 0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0 {
+                contract_address_const::<0x3913d184e537671dfeca3f67015bb845f2d12a26e5ec56bdc495913b20acb08>()
+            } 
+            //WBTC
+            else if tokenAddress == 0x92f3B59a79bFf5dc60c0d59eA13a44D082B2bdFC {
+                contract_address_const::<0x025a3820179262679392e872d7daaa44986af7caae1f41b7eedee561ca35a169>()
+            }
+            //wstETH 
+            else if tokenAddress == 0xB82381A3fBD3FaFA77B3a7bE693342618240067b {
+                contract_address_const::<0x0172393a285eeac98ea136a4be473986a58ddd0beaf158517bc32166d0328824>()
+            } else {
+                panic!("Invalid token address")
+            }
+        }
+        
+        
+
         fn assert_only_owner(ref self: ContractState) {
             let caller = get_caller_address();
             let owner = self.contract_owner.read();
