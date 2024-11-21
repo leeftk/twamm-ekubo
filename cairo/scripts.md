@@ -9,12 +9,12 @@ sncast account create \
 # Deploy the account
 sncast account deploy \
     --url https://free-rpc.nethermind.io/sepolia-juno \
-    --name some-name \
+    --name some-namee \
     --fee-token strk
 
 ## Contract Declaration and Deployment
 # Declare the L2TWAMMBridge contract
-sncast --account some-namee declare --contract-name L2TWAMMBridge --url https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_7/oTytRAZo0rI3b1-9Ki8M0s4tKVF1Tjbt --fee-token strk --package twammbridge   
+sncast --account some-name declare --contract-name L2TWAMMBridge --url https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_7/oTytRAZo0rI3b1-9Ki8M0s4tKVF1Tjbt --fee-token strk --package twammbridge   
 
 # Deploy the contract using the class hash
 sncast --account some-name deploy \
