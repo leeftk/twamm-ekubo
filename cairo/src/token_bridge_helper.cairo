@@ -70,7 +70,7 @@ mod TokenBridgeHelper {
         self.contract_owner.write(get_caller_address());
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl TokenBridgeHelper of super::ITokenBridgeHelper<ContractState> {
         fn get_l2_bridge_by_l2_token(
             ref self: ContractState, 
@@ -142,3 +142,4 @@ mod TokenBridgeHelper {
         }
     }
 }
+//contract_address: 0x5551e87e8e4d4084f0e5be9b32205039168bb3313304fbbe8dbdd6204e4dd39

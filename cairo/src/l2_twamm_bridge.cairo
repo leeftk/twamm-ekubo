@@ -100,8 +100,8 @@ mod L2TWAMMBridge {
 
 
     #[constructor]
-    fn constructor(ref self: ContractState) {
-        self.contract_owner.write(get_caller_address());
+    fn constructor(ref self: ContractState, contract_owner: ContractAddress) {
+        self.contract_owner.write(contract_owner);
     }
 
 
@@ -120,6 +120,10 @@ mod L2TWAMMBridge {
         }
     }
 
+    #[external(v0)]
+    fn get_contract_owner(self: @ContractState) -> ContractAddress {
+       return self.contract_owner.read();
+    }
 
     #[external(v0)]
     #[abi(embed_v0)]
@@ -160,7 +164,7 @@ mod L2TWAMMBridge {
 
         fn handle_withdrawal(ref self: ContractState, message: MyData) {
             let order_manager = IOrderManagerDispatcher { contract_address: self.order_manager.read() };
-            order_manager.execute_withdrawal(message, self.positions_address.read());
+            order_manager.execute_withdrawal(message, self.positions_address.read(), self.token_bridge_helper.read());
         }
 
         fn assert_only_owner(ref self: ContractState) {
@@ -170,3 +174,4 @@ mod L2TWAMMBridge {
         }
     }
 }
+//contract_address: 0x3ab3e22ed982eee791557781ca80a3859afc78f5e6cce579d15bed1fa66972

@@ -7,6 +7,7 @@ use ekubo::extensions::interfaces::twamm::{OrderKey};
 use ekubo::interfaces::positions::{IPositionsDispatcher, IPositionsDispatcherTrait};
 use starknet::EthAddress;
 use super::types::{MyData, OrderKey_Copy};
+use super::token_bridge_helper::{ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait };
 
 #[derive(Drop, Serde, starknet::Store)]
 struct Order_Created {
@@ -15,11 +16,24 @@ struct Order_Created {
 } 
 
 #[starknet::interface]
+pub trait ITokenBridge<TContractState> {
+    fn initiate_token_withdraw(
+        ref self: TContractState, l1_token: EthAddress, l1_recipient: EthAddress, amount: u256
+    );
+    fn handle_deposit(
+        ref self: TContractState,
+        from_address: felt252,
+        l2_recipient: ContractAddress,
+        amount: u256,
+    );
+}
+
+#[starknet::interface]
 trait IOrderManager<TContractState> {
     fn create_order_key(ref self: TContractState, message: MyData) -> OrderKey;
     fn decode_order_key_from_stored_copy(ref self: TContractState, message: OrderKey_Copy) -> OrderKey;
     fn execute_deposit(ref self: TContractState, message: MyData) -> (u64, OrderKey);
-    fn execute_withdrawal(ref self: TContractState, message: MyData, positions_address: ContractAddress) -> u128;
+    fn execute_withdrawal(ref self: TContractState, message: MyData, positions_address: ContractAddress, token_bridge_helper_address: ContractAddress);
     fn get_depositor_from_id(ref self: TContractState, id: u64) -> EthAddress;
     fn get_id_from_depositor(ref self: TContractState, depositor: EthAddress) -> u64;
     fn get_withdrawal_status(ref self: TContractState, depositor: EthAddress, id: u64) -> bool;
@@ -32,6 +46,8 @@ mod OrderManager {
     use super::{Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess, StoragePath,
         StoragePathEntry, IPositionsDispatcher, IPositionsDispatcherTrait};
     use starknet::{get_block_timestamp, get_caller_address, contract_address_const, get_contract_address};
+    use super::{ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait};
+    use super::{ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait};
 
     const ERROR_NO_TOKENS_MINTED: felt252 = 'No tokens minted';
     const ERROR_ZERO_AMOUNT: felt252 = 'Amount cannot be zero';
@@ -51,7 +67,7 @@ mod OrderManager {
         self.contract_owner.write(get_caller_address());
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl OrderManager of super::IOrderManager<ContractState> {
         fn create_order_key(ref self: ContractState, message: MyData) -> OrderKey {
             OrderKey {
@@ -125,8 +141,9 @@ mod OrderManager {
         fn execute_withdrawal(
             ref self: ContractState, 
             message: MyData,
-            positions_address: ContractAddress
-        ) -> u128 {
+            positions_address: ContractAddress,
+            token_bridge_helper_address: ContractAddress
+        ) {
             let depositor: EthAddress = message.sender.try_into().unwrap();
             let order_created = self.order_depositor_to_order_created.read(depositor);
             
@@ -142,7 +159,13 @@ mod OrderManager {
             let positions = IPositionsDispatcher { contract_address: positions_address };
             let this_contract_address = get_contract_address();
             
-            positions.withdraw_proceeds_from_sale_to(id, order_key, this_contract_address)
+            let amount_sold = positions.withdraw_proceeds_from_sale_to(id, order_key, this_contract_address);
+
+            let helper = ITokenBridgeHelperDispatcher { contract_address: token_bridge_helper_address };
+            
+            let l2_bridge = helper.get_l2_bridge_from_l1_token(message.buy_token.try_into().unwrap());
+            let token_bridge = ITokenBridgeDispatcher { contract_address: l2_bridge };
+            token_bridge.initiate_token_withdraw(message.buy_token.try_into().unwrap(), depositor, amount_sold.into());
         }
 
         fn get_depositor_from_id(ref self: ContractState, id: u64) -> EthAddress {
@@ -162,3 +185,4 @@ mod OrderManager {
         }
     }
 }
+//contract_address: 0x6bc2020b3a4f0d075da82f9638fd491d0a4386b3d3925ea8f0638e2ce0204fe

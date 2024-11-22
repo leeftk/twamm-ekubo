@@ -96,7 +96,6 @@ contract L1TWAMMBridge is Ownable {
         _validateTimeParams(params.start, params.end);
         // address tokenBridge = starknetRegistry.getBridge(address(token));
         _handleTokenTransfer(params.amount, address(token), address(starknetBridge));
-        IStarknetTokenBridge(starknetBridge).deposit{value: msg.value}(address(token), params.amount, l2EndpointAddress);
         uint256[] memory payload = _encodeDepositPayload(
             msg.sender,
             params.sellToken,
@@ -107,14 +106,13 @@ contract L1TWAMMBridge is Ownable {
             params.amount,
             uint256(uint160(address(starknetBridge)))
         );
-        _sendMessage(l2EndpointAddress, ON_RECEIVE_SELECTOR, payload);
+        _depositWithMessage(params.amount, payload, address(starknetBridge));
 
         emit DepositAndCreateOrder(msg.sender, l2EndpointAddress, params.amount, DEFAULT_NONCE);
     }
 
     function initiateWithdrawal(uint256 amount, address l1_token) external payable {
-        uint256[] memory message =
-            _encodeWithdrawalPayload(msg.sender, l1_token, amount);
+        uint256[] memory message = _encodeWithdrawalPayload(msg.sender, l1_token, amount);
 
         _sendMessage(l2EndpointAddress, ON_RECEIVE_SELECTOR, message);
 
@@ -145,6 +143,12 @@ contract L1TWAMMBridge is Ownable {
 
     function _sendMessage(uint256 contractAddress, uint256 selector, uint256[] memory payload) public payable {
         snMessaging.sendMessageToL2{value: msg.value}(contractAddress, selector, payload);
+    }
+
+    function _depositWithMessage(uint256 amount, uint256[] memory message, address tokenBridgeAddress) public payable {
+        uint256 value_allocated = msg.value / 2;
+        IStarknetTokenBridge(tokenBridgeAddress).deposit{value: value_allocated}(address(token), amount, l2EndpointAddress);
+        snMessaging.sendMessageToL2{value: value_allocated}(l2EndpointAddress, ON_RECEIVE_SELECTOR, message);
     }
 
     function _handleTokenTransfer(uint256 amount, address tokenAddress, address bridge) private {
@@ -223,10 +227,9 @@ contract L1TWAMMBridge is Ownable {
     }
 
     // External view functions
-    function isTimeValidExternal(uint256 start, uint256 end) external view returns (bool) {
+    function isTimeValidExternal(uint256 start, uint256 end) external pure returns (bool) {
         return _isTimeValid(start, end);
     }
-
 
     // -----------------------------------------
     // Functions strictly for testing
@@ -239,9 +242,5 @@ contract L1TWAMMBridge is Ownable {
     function deposit(uint256 amount, uint256 l2Recipient) external payable {
         token.approve(address(starknetBridge), amount);
         starknetBridge.deposit(address(token), amount, l2EndpointAddress);
-    }
-
-    function depositWithMessage(uint256 amount, uint256 l2Recipient, uint256[] calldata message) external payable {
-        starknetBridge.depositWithMessage{value: msg.value}(address(token), amount, l2Recipient, message);
     }
 }
