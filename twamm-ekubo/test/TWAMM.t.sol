@@ -84,16 +84,15 @@ contract L1TWAMMBridgeTest is Test {
         );
     }
 
-    function testCreateOrder() public {
+ function testCreateOrder() public {
         vm.startPrank(user);
         token.approve(address(bridge), DEFAULT_AMOUNT);
-        // vm.expectCall(address(token), abi.encodeCall(IERC20.transferFrom, (user, address(bridge), DEFAULT_AMOUNT)));
-        // uint256 expectedNonce = starknetBridge.mockNonce();
+        uint256 expectedNonce = starknetBridge.mockNonce();
 
-        // vm.expectEmit(true, true, false, true);
-        // emit DepositAndCreateOrder(address(user), l2EndpointAddress, DEFAULT_AMOUNT, expectedNonce);
+        vm.expectEmit(true, true, false, true);
+        emit DepositAndCreateOrder(address(user), l2EndpointAddress, DEFAULT_AMOUNT, expectedNonce);
 
-      OrderParams memory params = OrderParams({
+        OrderParams memory params = OrderParams({
             sender: msg.sender,
             sellToken: uint256(uint160(address(token))),
             buyToken: uint256(uint160(address(0x123))),
@@ -107,14 +106,15 @@ contract L1TWAMMBridgeTest is Test {
         bridge.depositAndCreateOrder{value: DEFAULT_FEE}(params);
         vm.stopPrank();
 
-        // assertEq(token.balanceOf(address(bridge)), 0, "Bridge should not hold tokens");
+        assertEq(token.balanceOf(address(bridge)), 0, "Bridge should not hold tokens");
 
-        // MockStarknetTokenBridge.DepositParams memory params = starknetBridge.getLastDepositParams();
-        // assertEq(params.token, address(token), "Incorrect token");
-        // assertEq(params.amount, DEFAULT_AMOUNT, "Incorrect amount");
-        // assertEq(params.message.length, 7, "Incorrect payload length");
-        // assertEq(params.l2EndpointAddress, l2EndpointAddress, "Incorrect sender address");
+        MockStarknetTokenBridge.DepositParams memory depositParams = starknetBridge.getLastDepositParams();
+        assertEq(depositParams.token, address(token), "Incorrect token");
+        assertEq(depositParams.amount, DEFAULT_AMOUNT, "Incorrect amount");
+        assertEq(depositParams.message.length, 7, "Incorrect payload length");
+        assertEq(depositParams.l2EndpointAddress, l2EndpointAddress, "Incorrect sender address");
     }
+
 
     // === DEPOSIT TESTS ===
     function testDepositWithMessage() public {
