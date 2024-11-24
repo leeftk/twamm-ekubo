@@ -8,24 +8,12 @@ use ekubo::interfaces::positions::{IPositionsDispatcher, IPositionsDispatcherTra
 use starknet::EthAddress;
 use super::types::{MyData, OrderKey_Copy};
 use super::token_bridge_helper::{ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait };
+use super::interfaces::{ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait};
 
 #[derive(Drop, Serde, starknet::Store)]
 struct Order_Created {
     order_key: OrderKey_Copy,
     id: u64,
-} 
-
-#[starknet::interface]
-pub trait ITokenBridge<TContractState> {
-    fn initiate_token_withdraw(
-        ref self: TContractState, l1_token: EthAddress, l1_recipient: EthAddress, amount: u256
-    );
-    fn handle_deposit(
-        ref self: TContractState,
-        from_address: felt252,
-        l2_recipient: ContractAddress,
-        amount: u256,
-    );
 }
 
 #[starknet::interface]
