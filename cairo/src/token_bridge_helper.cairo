@@ -8,22 +8,10 @@ use super::interfaces::{ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait};
 
 #[starknet::interface]
 trait ITokenBridgeHelper<TContractState> {
-    fn get_l2_bridge_by_l2_token(
-        ref self: TContractState, buy_token: ContractAddress
-    ) -> ContractAddress;
-    fn get_l1_token_by_l2_token(
-        ref self: TContractState, l2_token: ContractAddress
-    ) -> EthAddress;
     fn get_l2_bridge_from_l1_token(
         self: @TContractState, 
         token_address: felt252
     ) -> ContractAddress;
-    fn send_token_to_l1(
-        ref self: TContractState, 
-        l1_token: EthAddress, 
-        l1_recipient: EthAddress, 
-        amount: u256
-    );
 }
 
 #[starknet::contract]
@@ -80,23 +68,7 @@ mod TokenBridgeHelper {
 
     #[abi(embed_v0)]
     impl TokenBridgeHelper of super::ITokenBridgeHelper<ContractState> {
-        fn get_l2_bridge_by_l2_token(
-            ref self: ContractState, 
-            buy_token: ContractAddress
-        ) -> ContractAddress {
-            self.assert_only_owner();
-            self.l2_bridge_to_l2_token.read(buy_token)
-        }
 
-        fn get_l1_token_by_l2_token(
-            ref self: ContractState, 
-            l2_token: ContractAddress
-        ) -> EthAddress {
-            self.assert_only_owner();
-            self.l2_token_to_l1_token.read(l2_token)
-        }
-
-        // I'm still not clear on this
         fn get_l2_bridge_from_l1_token(
             self: @ContractState, 
             token_address: felt252
@@ -104,17 +76,6 @@ mod TokenBridgeHelper {
             let bridge = self.l1_token_to_l2_token_bridge.read(token_address);
             assert(!bridge.is_zero(), 'Invalid Token');
             bridge
-        }
-
-        fn send_token_to_l1(
-            ref self: ContractState,
-            l1_token: EthAddress,
-            l1_recipient: EthAddress,
-            amount: u256
-        ) {
-            let l2_bridge = self.get_l2_bridge_from_l1_token(l1_token.address);
-            let token_bridge = ITokenBridgeDispatcher { contract_address: l2_bridge };
-            token_bridge.initiate_token_withdraw(l1_token, l1_recipient, amount);
         }
     }
 
@@ -127,4 +88,4 @@ mod TokenBridgeHelper {
         }
     }
 }
-//contract_address: 0x5551e87e8e4d4084f0e5be9b32205039168bb3313304fbbe8dbdd6204e4dd39
+//contract_address: 0x7a73ab2bf6ce010643d3237053f8a09943cc19e52d294fdb58e74231fa1e1f0

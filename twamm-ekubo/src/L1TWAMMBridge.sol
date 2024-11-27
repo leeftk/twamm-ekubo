@@ -16,6 +16,9 @@ interface IStarknetTokenBridge {
     function deposit(address token, uint256 amount, uint256 l2Recipient) external payable;
 
     function sendMessageToL2(uint256 l2Recipient, uint256 selector, uint256[] calldata payload) external payable;
+    function estimateDepositFeeWei() external pure returns (uint256);
+    function depositCancelRequest(address token, uint256 amount, uint256 l2Recipient, uint256 nonce) external;
+    function depositReclaim(address token, uint256 amount, uint256 l2Recipient, uint256 nonce) external;
 }
 
 interface IStarknetRegistry {
@@ -119,6 +122,16 @@ contract L1TWAMMBridge is Ownable {
         emit WithdrawalInitiated(msg.sender, amount);
     }
 
+    function initiateCancelDepositRequest(address l1_token, uint256 amount, uint256 nonce) external {
+        // address tokenBridge = starknetRegistry.getBridge(address(token));
+        IStarknetTokenBridge(address(starknetBridge)).depositCancelRequest(l1_token, amount, l2EndpointAddress, nonce);
+    }
+
+    function initiateDepositReclaim(address l1_token, uint256 amount, uint256 nonce) external {
+        // address tokenBridge = starknetRegistry.getBridge(address(token));
+        IStarknetTokenBridge(address(starknetBridge)).depositReclaim(l1_token, amount, l2EndpointAddress, nonce);
+    }
+
     /// @notice Sets the L2 endpoint address
     function setL2EndpointAddress(uint256 _l2EndpointAddress) external onlyOwner {
         l2EndpointAddress = _l2EndpointAddress;
@@ -146,9 +159,12 @@ contract L1TWAMMBridge is Ownable {
     }
 
     function _depositWithMessage(uint256 amount, uint256[] memory message, address tokenBridgeAddress) public payable {
-        uint256 value_allocated = msg.value / 2;
-        IStarknetTokenBridge(tokenBridgeAddress).deposit{value: value_allocated}(address(token), amount, l2EndpointAddress);
-        snMessaging.sendMessageToL2{value: value_allocated}(l2EndpointAddress, ON_RECEIVE_SELECTOR, message);
+        uint256 estimatedDepositFee = IStarknetTokenBridge(tokenBridgeAddress).estimateDepositFeeWei();
+        uint256 messageFee = msg.value - estimatedDepositFee;
+        IStarknetTokenBridge(tokenBridgeAddress).deposit{value: estimatedDepositFee}(
+            address(token), amount, l2EndpointAddress
+        );
+        snMessaging.sendMessageToL2{value: messageFee}(l2EndpointAddress, ON_RECEIVE_SELECTOR, message);
     }
 
     function _handleTokenTransfer(uint256 amount, address tokenAddress, address bridge) private {
@@ -241,6 +257,6 @@ contract L1TWAMMBridge is Ownable {
 
     function deposit(uint256 amount, uint256 l2Recipient) external payable {
         token.approve(address(starknetBridge), amount);
-        starknetBridge.deposit(address(token), amount, l2EndpointAddress);
+        starknetBridge.deposit{value: msg.value}(address(token), amount, l2EndpointAddress);
     }
 }
