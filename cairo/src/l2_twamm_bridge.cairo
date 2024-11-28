@@ -81,7 +81,8 @@ mod L2TWAMMBridge {
     struct MessageReceived {
         message: OrderDetails
     }
-  
+
+    // Core Order Manager operations
     impl OrderManagerImpl = OrderManagerComponent::OrderManagerImpl<ContractState>;
 
     // constructor
@@ -103,7 +104,7 @@ mod L2TWAMMBridge {
         } 
     }
 
-    
+    // External Functions
     #[external(v0)]
     #[abi(embed_v0)]
     impl L2TWAMMBridge of super::IL2TWAMMBridge<ContractState> {
@@ -137,7 +138,7 @@ mod L2TWAMMBridge {
             return self.token_bridge_helper.read();
         }
     }
-    
+
     // Internal helper functions
     #[generate_trait]
     impl PrivateFunctions of PrivateFunctionsTrait {
