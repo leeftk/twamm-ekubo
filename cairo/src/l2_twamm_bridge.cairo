@@ -10,7 +10,7 @@ use ekubo::interfaces::positions::{IPositionsDispatcher, IPositionsDispatcherTra
 use ekubo::interfaces::core::{ICoreDispatcherTrait, ICoreDispatcher, IExtensionDispatcher};
 use starknet::EthAddress;
 use super::token_bridge_helper::{ITokenBridgeHelper, ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait};
-use super::types::{MyData, OrderKey_Copy};
+use super::types::{OrderDetails, OrderKey_Copy};
 use super::interfaces::{ITokenBridge, ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait, IERC20, IERC20Dispatcher, IERC20DispatcherTrait};
 use super::order_manager::OrderManagerComponent;
 
@@ -34,7 +34,7 @@ mod L2TWAMMBridge {
     use super::EthAddress;
     use super::{get_caller_address};
     use core::array::ArrayTrait;
-    use super::MyData;
+    use super::OrderDetails;
     use super::{IERC20, IERC20Dispatcher, IERC20DispatcherTrait};
     use super::OrderKey_Copy;
     use super::{ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait };
@@ -73,7 +73,7 @@ mod L2TWAMMBridge {
 
     #[derive(Drop, starknet::Event)]
     struct MessageReceived {
-        message: MyData
+        message: OrderDetails
     }
   
     impl OrderManagerImpl = OrderManagerComponent::OrderManagerImpl<ContractState>;
@@ -85,12 +85,12 @@ mod L2TWAMMBridge {
 
 
     #[l1_handler]
-    fn msg_handler_struct(ref self: ContractState, from_address: felt252, data: MyData) {
-        if data.deposit_operation == 0 {
+    fn msg_handler_struct(ref self: ContractState, from_address: felt252, data: OrderDetails) {
+        if data.order_operation == 0 {
             self.emit(MessageReceived { message: data });
             self.handle_deposit(data);
         }
-        else if data.deposit_operation == 2 {
+        else if data.order_operation == 2 {
             self.emit(MessageReceived { message: data });
            self.handle_withdrawal(data);        
         } 
@@ -127,11 +127,11 @@ mod L2TWAMMBridge {
     #[generate_trait]
     impl PrivateFunctions of PrivateFunctionsTrait {
 
-        fn handle_deposit(ref self: ContractState, message: MyData) {
+        fn handle_deposit(ref self: ContractState, message: OrderDetails) {
             self.order_manager.execute_deposit(message);
         }
 
-        fn handle_withdrawal(ref self: ContractState, message: MyData) {
+        fn handle_withdrawal(ref self: ContractState, message: OrderDetails) {
             self.order_manager.execute_withdrawal(message, self.positions_address.read(), self.token_bridge_helper.read());
         }
 

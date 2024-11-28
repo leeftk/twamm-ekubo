@@ -1,8 +1,8 @@
 use starknet::ContractAddress;
 
 #[derive(Drop, Serde, Copy)]
-pub struct MyData {
-    pub deposit_operation: felt252,
+pub struct OrderDetails {
+    pub order_operation: felt252,
     pub sender: felt252,
     pub sell_token: felt252,
     pub buy_token: felt252,

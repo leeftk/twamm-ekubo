@@ -8,7 +8,7 @@ use ekubo::extensions::interfaces::twamm::{OrderKey};
 use ekubo::interfaces::positions::{IPositionsDispatcher, IPositionsDispatcherTrait};
 use super::token_bridge_helper::{ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait};
 use super::interfaces::{ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait};
-use super::types::{MyData, OrderKey_Copy};
+use super::types::{OrderDetails, OrderKey_Copy};
 
 
 #[derive(Drop, Serde, starknet::Store)]
@@ -19,10 +19,10 @@ struct Order_Created {
 
 #[starknet::interface]
 trait IOrderManager<TContractState> {
-    fn create_order_key( ref self: TContractState ,message: MyData) -> OrderKey;
+    fn create_order_key( ref self: TContractState ,message: OrderDetails) -> OrderKey;
     fn decode_order_key_from_stored_copy( ref self: TContractState, stored_key: OrderKey_Copy) -> OrderKey;
-    fn execute_deposit( ref self: TContractState, message: MyData);
-    fn execute_withdrawal( ref self: TContractState, message: MyData, positions_address: ContractAddress, token_bridge_helper_address: ContractAddress);
+    fn execute_deposit( ref self: TContractState, message: OrderDetails);
+    fn execute_withdrawal( ref self: TContractState, message: OrderDetails, positions_address: ContractAddress, token_bridge_helper_address: ContractAddress);
     fn get_depositor_from_id( ref self: TContractState ,id: u64) -> EthAddress;
     fn get_id_from_depositor( ref self: TContractState, depositor: EthAddress) -> u64;
     fn get_withdrawal_status( ref self: TContractState, depositor: EthAddress, id: u64) -> bool;
@@ -31,7 +31,7 @@ trait IOrderManager<TContractState> {
 
 #[starknet::component]
 mod OrderManagerComponent {
-    use super::{OrderKey, OrderKey_Copy, MyData, Order_Created, EthAddress, ContractAddress};
+    use super::{OrderKey, OrderKey_Copy, OrderDetails, Order_Created, EthAddress, ContractAddress};
     use super::{Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess, StoragePath,
         StoragePathEntry, IPositionsDispatcher, IPositionsDispatcherTrait};
     use starknet::{get_block_timestamp, get_caller_address, contract_address_const, get_contract_address};
@@ -83,7 +83,7 @@ mod OrderManagerComponent {
     > of super::IOrderManager<ComponentState<TContractState>>{
         fn create_order_key(
              ref self: ComponentState<TContractState>,
-            message: MyData
+            message: OrderDetails
         ) -> OrderKey {
             OrderKey {
                 sell_token: message.sell_token.try_into().unwrap(),
@@ -111,7 +111,7 @@ mod OrderManagerComponent {
         // Execute deposit
         fn execute_deposit(
              ref self: ComponentState<TContractState>,
-            message: MyData
+            message: OrderDetails
         ) {
             let current_timestamp = get_block_timestamp();
             let difference = 16 - (current_timestamp % 16);
@@ -167,7 +167,7 @@ mod OrderManagerComponent {
         // Execute withdrawal
         fn execute_withdrawal(
              ref self: ComponentState<TContractState>,
-            message: MyData,
+            message: OrderDetails,
             positions_address: ContractAddress,
             token_bridge_helper_address: ContractAddress
         ) {
