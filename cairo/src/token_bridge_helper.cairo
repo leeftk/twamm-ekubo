@@ -20,9 +20,11 @@ mod TokenBridgeHelper {
         ContractAddress, contract_address_const, get_caller_address, EthAddress, Map, ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait
     };
 
+    // Error Constants
     const ERROR_UNAUTHORIZED: felt252 = 'Unauthorized';
     const ERROR_INVALID_TOKEN: felt252 = 'Invalid token address';
 
+    // Storage
     #[storage]
     struct Storage {
         l2_bridge_to_l2_token: Map::<ContractAddress, ContractAddress>,
@@ -31,6 +33,7 @@ mod TokenBridgeHelper {
         contract_owner: ContractAddress,
     }
 
+    // Constructor
     #[constructor]
     fn constructor(ref self: ContractState) {
         self.contract_owner.write(get_caller_address());
@@ -66,19 +69,22 @@ mod TokenBridgeHelper {
         );
     }
 
+    // External functions
     #[abi(embed_v0)]
     impl TokenBridgeHelper of super::ITokenBridgeHelper<ContractState> {
-
+        // Retrieves the L2 bridge address associated with a given L1 token address.
         fn get_l2_bridge_from_l1_token(
             self: @ContractState, 
             token_address: felt252
         ) -> ContractAddress {
             let bridge = self.l1_token_to_l2_token_bridge.read(token_address);
+            // Ensures the bridge address is not zero, indicating a valid token.
             assert(!bridge.is_zero(), 'Invalid Token');
             bridge
         }
     }
 
+    // Internal helper functions
     #[generate_trait]
     impl PrivateFunctions of PrivateFunctionsTrait {
         fn assert_only_owner(ref self: ContractState) {
@@ -88,4 +94,4 @@ mod TokenBridgeHelper {
         }
     }
 }
-//contract_address: 0x7a73ab2bf6ce010643d3237053f8a09943cc19e52d294fdb58e74231fa1e1f0
+

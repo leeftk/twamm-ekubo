@@ -21,3 +21,9 @@ pub struct OrderKey_Copy {
     pub start_time: u64,
     pub end_time: u64
 }
+
+#[derive(Drop, Serde, starknet::Store)]
+struct Order_Created {
+    order_key: OrderKey_Copy,
+    id: u64,
+}

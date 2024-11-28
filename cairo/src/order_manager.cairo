@@ -8,14 +8,7 @@ use ekubo::extensions::interfaces::twamm::{OrderKey};
 use ekubo::interfaces::positions::{IPositionsDispatcher, IPositionsDispatcherTrait};
 use super::token_bridge_helper::{ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait};
 use super::interfaces::{ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait};
-use super::types::{OrderDetails, OrderKey_Copy};
-
-
-#[derive(Drop, Serde, starknet::Store)]
-struct Order_Created {
-    order_key: OrderKey_Copy,
-    id: u64,
-}
+use super::types::{OrderDetails, OrderKey_Copy, Order_Created};
 
 #[starknet::interface]
 trait IOrderManager<TContractState> {
@@ -38,14 +31,14 @@ mod OrderManagerComponent {
     use super::{ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait};
     use super::{ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait};
     
-
+    // Error constants 
     const ERROR_NO_TOKENS_MINTED: felt252 = 'No tokens minted';
     const ERROR_ZERO_AMOUNT: felt252 = 'Amount cannot be zero';
     const ERROR_UNAUTHORIZED: felt252 = 'Unauthorized';
     const ERROR_ALREADY_WITHDRAWN: felt252 = 'Already Withdrawn';
     const U128_MAX: u256 = 0xffffffffffffffffffffffffffffffff; 
 
-
+    // Storage
     #[storage]
     struct Storage {
         order_id_to_depositor: Map::<u64, EthAddress>,
@@ -55,6 +48,7 @@ mod OrderManagerComponent {
         contract_owner: ContractAddress,
     }
 
+    // Events
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -113,18 +107,21 @@ mod OrderManagerComponent {
              ref self: ComponentState<TContractState>,
             message: OrderDetails
         ) {
+            // Calculate start and end times for the order
             let current_timestamp = get_block_timestamp();
             let difference = 16 - (current_timestamp % 16);
-            let start_time = (current_timestamp + difference);
+            let start_time = current_timestamp + difference;
             let end_time = start_time + 64;
 
             let new_sell_token: ContractAddress = message.sell_token.try_into().unwrap();
             let new_buy_token: ContractAddress = message.buy_token.try_into().unwrap();
             let new_fee: u128 = message.fee.try_into().unwrap();
 
+            // Validate and convert message amount to u128
             assert(message.amount.try_into().unwrap() <= U128_MAX, 'Amount exceeds u128 max');
             let amount_u128: u128 = message.amount.try_into().unwrap();
 
+            // Create an OrderKey instance with the new sell token, buy token, fee, start time, and end time
             let order_key = OrderKey {
                 sell_token: new_sell_token,
                 buy_token: new_buy_token,
@@ -133,6 +130,7 @@ mod OrderManagerComponent {
                 end_time: end_time,
             };
 
+            // Create an OrderKey_Copy instance with the same details as the OrderKey for storage purposes
             let order_key_copy = OrderKey_Copy {
                 sell_token: new_sell_token,
                 buy_token: new_buy_token,
@@ -174,16 +172,23 @@ mod OrderManagerComponent {
             let depositor: EthAddress = message.sender.try_into().unwrap();
             let order_created = self.order_depositor_to_order_created.read(depositor);
             
+            // Decode order key from stored copy
             let order_key = self.decode_order_key_from_stored_copy(order_created.order_key);
             let id = order_created.id;
             
+            // Verify depositor's identity
             let user = self.get_depositor_from_id(id);
+            // Check if withdrawal has already been processed
             let withdrawal_status = self.get_withdrawal_status(depositor, id);
 
+            // Ensure the current user is the depositor
             assert(user == depositor, ERROR_UNAUTHORIZED);
+            // Ensure the order has not been withdrawn yet
             assert(!withdrawal_status, ERROR_ALREADY_WITHDRAWN);
 
-            let positions = IPositionsDispatcher { contract_address: positions_address };
+            let positions = IPositionsDispatcher {
+                contract_address: contract_address_const::<0x06a2aee84bb0ed5dded4384ddd0e40e9c1372b818668375ab8e3ec08807417e5>()
+            };
             let this_contract_address = get_contract_address();
             
             let amount_sold = positions.withdraw_proceeds_from_sale_to(id, order_key, this_contract_address);

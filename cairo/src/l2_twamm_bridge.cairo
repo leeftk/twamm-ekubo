@@ -20,6 +20,8 @@ pub trait IL2TWAMMBridge<TContractState> {
     fn set_positions_address(ref self: TContractState, address: ContractAddress);
     fn set_token_bridge_address(ref self: TContractState, address: ContractAddress);
     fn set_token_bridge_helper(ref self: TContractState, address: ContractAddress);
+    fn get_contract_owner(self: @TContractState) -> ContractAddress;
+    fn get_token_bridge_helper(self: @TContractState) -> ContractAddress;
 }
 
 #[starknet::contract]
@@ -40,8 +42,10 @@ mod L2TWAMMBridge {
     use super::{ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait };
     use super::OrderManagerComponent;
 
+     // Manages order-related operations
     component!(path: OrderManagerComponent, storage: order_manager, event: OrderManagerEvent);
 
+    // Error Constants
     const ERROR_NO_TOKENS_MINTED: felt252 = 'No tokens minted';
     const ERROR_NO_TOKENS_SOLD: felt252 = 'No tokens sold';
     const ERROR_NOT_ORDER_OWNER: felt252 = 'Not order owner';
@@ -50,6 +54,7 @@ mod L2TWAMMBridge {
     const ERROR_ZERO_AMOUNT: felt252 = 'Amount cannot be zero';
     const ALREADY_WITHDRAWN: felt252 = 'Order has been withdrawn';
 
+    // Storage
     #[storage]
     pub struct Storage {
         sender_to_amount: Map::<EthAddress, u256>,
@@ -63,6 +68,7 @@ mod L2TWAMMBridge {
         order_manager: OrderManagerComponent::Storage
     }
 
+    // Events
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -78,12 +84,13 @@ mod L2TWAMMBridge {
   
     impl OrderManagerImpl = OrderManagerComponent::OrderManagerImpl<ContractState>;
 
+    // constructor
     #[constructor]
     fn constructor(ref self: ContractState, contract_owner: ContractAddress) {
         self.contract_owner_address.write(contract_owner);
     }
 
-
+    // l1_handler
     #[l1_handler]
     fn msg_handler_struct(ref self: ContractState, from_address: felt252, data: OrderDetails) {
         if data.order_operation == 0 {
@@ -96,45 +103,53 @@ mod L2TWAMMBridge {
         } 
     }
 
-    #[external(v0)]
-    fn get_contract_owner(self: @ContractState) -> ContractAddress {
-       return self.contract_owner_address.read();
-    }
-
-    #[external(v0)]
-    fn get_token_bridge_helper(self: @ContractState) -> ContractAddress {
-        return self.token_bridge_helper.read();
-    }
-
+    
     #[external(v0)]
     #[abi(embed_v0)]
     impl L2TWAMMBridge of super::IL2TWAMMBridge<ContractState> {
+        // Admin functions to set contract addresses
 
+        // Sets token bridge address (owner only)
         fn set_token_bridge_address(ref self: ContractState, address: ContractAddress) {
             self.assert_only_owner();
             self.token_bridge_address.write(address);
         }
 
+        // Sets positions contract address (owner only)
         fn set_positions_address(ref self: ContractState, address: ContractAddress) {
             self.assert_only_owner();
             self.positions_address.write(address);
         }
+
+        // Sets token bridge helper address (owner only)
         fn set_token_bridge_helper(ref self: ContractState, address: ContractAddress) {
             self.assert_only_owner();
             self.token_bridge_helper.write(address);
+        }
+
+        // View functions
+
+        fn get_contract_owner(self: @ContractState) -> ContractAddress {
+            return self.contract_owner_address.read();
         } 
+
+        fn get_token_bridge_helper(self: @ContractState) -> ContractAddress {
+            return self.token_bridge_helper.read();
+        }
     }
+    
+    // Internal helper functions
     #[generate_trait]
     impl PrivateFunctions of PrivateFunctionsTrait {
-
+        // Processes deposit message from L1
         fn handle_deposit(ref self: ContractState, message: OrderDetails) {
             self.order_manager.execute_deposit(message);
         }
-
+        // Processes withdrawal message from L1
         fn handle_withdrawal(ref self: ContractState, message: OrderDetails) {
             self.order_manager.execute_withdrawal(message, self.positions_address.read(), self.token_bridge_helper.read());
         }
-
+        // Only Owner modifier
         fn assert_only_owner(ref self: ContractState) {
             let caller = get_caller_address();
             let owner = self.contract_owner_address.read();
@@ -142,4 +157,3 @@ mod L2TWAMMBridge {
         }
     }
 }
-//contract_address: 0x2c9b0e967948762be38c87ac131d2958f7988d6aff58885993f1c186a5333b8
