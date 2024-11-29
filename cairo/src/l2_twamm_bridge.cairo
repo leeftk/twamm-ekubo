@@ -13,6 +13,7 @@ use super::token_bridge_helper::{ITokenBridgeHelper, ITokenBridgeHelperDispatche
 use super::types::{OrderDetails, OrderKey_Copy};
 use super::interfaces::{ITokenBridge, ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait, IERC20, IERC20Dispatcher, IERC20DispatcherTrait};
 use super::order_manager::OrderManagerComponent;
+use super::errors::{ERROR_UNAUTHORIZED};
 
 
 #[starknet::interface]
@@ -41,18 +42,10 @@ mod L2TWAMMBridge {
     use super::OrderKey_Copy;
     use super::{ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait };
     use super::OrderManagerComponent;
+    use super::ERROR_UNAUTHORIZED;
 
      // Manages order-related operations
     component!(path: OrderManagerComponent, storage: order_manager, event: OrderManagerEvent);
-
-    // Error Constants
-    const ERROR_NO_TOKENS_MINTED: felt252 = 'No tokens minted';
-    const ERROR_NO_TOKENS_SOLD: felt252 = 'No tokens sold';
-    const ERROR_NOT_ORDER_OWNER: felt252 = 'Not order owner';
-    const ERROR_INVALID_ADDRESS: felt252 = 'Invalid address';
-    const ERROR_UNAUTHORIZED: felt252 = 'Unauthorized';
-    const ERROR_ZERO_AMOUNT: felt252 = 'Amount cannot be zero';
-    const ALREADY_WITHDRAWN: felt252 = 'Order has been withdrawn';
 
     // Storage
     #[storage]

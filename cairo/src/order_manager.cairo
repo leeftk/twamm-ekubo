@@ -9,6 +9,7 @@ use ekubo::interfaces::positions::{IPositionsDispatcher, IPositionsDispatcherTra
 use super::token_bridge_helper::{ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait};
 use super::interfaces::{ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait};
 use super::types::{OrderDetails, OrderKey_Copy, Order_Created};
+use super::errors::{ERROR_UNAUTHORIZED, ERROR_ALREADY_WITHDRAWN, ERROR_ZERO_AMOUNT, ERROR_NO_TOKENS_MINTED};
 
 #[starknet::interface]
 trait IOrderManager<TContractState> {
@@ -30,12 +31,8 @@ mod OrderManagerComponent {
     use starknet::{get_block_timestamp, get_caller_address, contract_address_const, get_contract_address};
     use super::{ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait};
     use super::{ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait};
-    
-    // Error constants 
-    const ERROR_NO_TOKENS_MINTED: felt252 = 'No tokens minted';
-    const ERROR_ZERO_AMOUNT: felt252 = 'Amount cannot be zero';
-    const ERROR_UNAUTHORIZED: felt252 = 'Unauthorized';
-    const ERROR_ALREADY_WITHDRAWN: felt252 = 'Already Withdrawn';
+    use super::{ERROR_UNAUTHORIZED, ERROR_ALREADY_WITHDRAWN, ERROR_ZERO_AMOUNT, ERROR_NO_TOKENS_MINTED};
+
     const U128_MAX: u256 = 0xffffffffffffffffffffffffffffffff; 
 
     // Storage
