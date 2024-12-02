@@ -105,10 +105,9 @@ mod OrderManagerComponent {
             message: OrderDetails
         ) {
             // Calculate start and end times for the order
-            let current_timestamp = get_block_timestamp();
-            let difference = 16 - (current_timestamp % 16);
-            let start_time = current_timestamp + difference;
-            let end_time = start_time + 64;
+            let difference = 16 - (message.start % 16);
+            let start_time = message.start + difference;
+            let end_time = message.end;
 
             let new_sell_token: ContractAddress = message.sell_token.try_into().unwrap();
             let new_buy_token: ContractAddress = message.buy_token.try_into().unwrap();
