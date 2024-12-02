@@ -69,7 +69,6 @@ contract L1TWAMMBridgeTest is Test {
 
         // Assert state of the Starknet bridge
         MockStarknetTokenBridge.DepositParams memory depositParams = starknetBridge.getLastDepositParams();
-        //assertEq(depositParams.token, uint256(uint160(address(token))), "Incorrect token");
         assertEq(starknetBridge.orderCreated(user), 1, "Order not created");
     }
 
