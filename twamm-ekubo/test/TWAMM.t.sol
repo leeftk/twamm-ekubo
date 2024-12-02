@@ -324,8 +324,7 @@ contract L1TWAMMBridgeTest is Test {
             fee: DEFAULT_FEE,
             start: start,
             end: end,
-            amount: DEFAULT_AMOUNT,
-            l2EndpointAddress: l2EndpointAddress
+            amount: DEFAULT_AMOUNT
         });
 
         // Expect the event to be emitted

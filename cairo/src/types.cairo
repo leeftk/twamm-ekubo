@@ -9,8 +9,7 @@ pub struct OrderDetails {
     pub fee: felt252,
     pub start: felt252,
     pub end: felt252,
-    pub amount: felt252,
-    pub token_bridge_address: felt252,
+    pub amount: felt252
 }
 
 #[derive(Drop, Serde, Copy, starknet::Store)]

@@ -14,7 +14,6 @@ interface IStarknetTokenBridge {
         payable;
 
     function deposit(address token, uint256 amount, uint256 l2Recipient) external payable;
-
     function sendMessageToL2(uint256 l2Recipient, uint256 selector, uint256[] calldata payload) external payable;
     function estimateDepositFeeWei() external pure returns (uint256);
     function depositCancelRequest(address token, uint256 amount, uint256 l2Recipient, uint256 nonce) external;
@@ -94,11 +93,11 @@ contract L1TWAMMBridge is Ownable {
     }
 
     function depositAndCreateOrder(OrderParams memory params) external payable {
-        //if (!validateBridge(address(token))) revert InvalidBridge();
+        if (!validateBridge(address(token))) revert InvalidBridge();
         if (msg.value == 0) revert ZeroValue();
         _validateTimeParams(params.start, params.end);
-        // address tokenBridge = starknetRegistry.getBridge(address(token));
-        _handleTokenTransfer(params.amount, address(token), address(starknetBridge));
+        address tokenBridge = starknetRegistry.getBridge(address(token));
+        _handleTokenTransfer(params.amount, address(token), tokenBridge);
         uint256[] memory payload = _encodeDepositPayload(
             msg.sender,
             params.sellToken,
@@ -106,8 +105,7 @@ contract L1TWAMMBridge is Ownable {
             params.fee,
             params.start,
             params.end,
-            params.amount,
-            uint256(uint160(address(starknetBridge)))
+            params.amount
         );
         _depositWithMessage(params.amount, payload, address(starknetBridge));
 
@@ -123,13 +121,13 @@ contract L1TWAMMBridge is Ownable {
     }
 
     function initiateCancelDepositRequest(address l1_token, uint256 amount, uint256 nonce) external {
-        // address tokenBridge = starknetRegistry.getBridge(address(token));
-        IStarknetTokenBridge(address(starknetBridge)).depositCancelRequest(l1_token, amount, l2EndpointAddress, nonce);
+        address tokenBridge = starknetRegistry.getBridge(address(token));
+        IStarknetTokenBridge(tokenBridge).depositCancelRequest(l1_token, amount, l2EndpointAddress, nonce);
     }
 
     function initiateDepositReclaim(address l1_token, uint256 amount, uint256 nonce) external {
-        // address tokenBridge = starknetRegistry.getBridge(address(token));
-        IStarknetTokenBridge(address(starknetBridge)).depositReclaim(l1_token, amount, l2EndpointAddress, nonce);
+        address tokenBridge = starknetRegistry.getBridge(address(token));
+        IStarknetTokenBridge(tokenBridge).depositReclaim(l1_token, amount, l2EndpointAddress, nonce);
     }
 
     /// @notice Sets the L2 endpoint address
@@ -168,8 +166,8 @@ contract L1TWAMMBridge is Ownable {
     }
 
     function _handleTokenTransfer(uint256 amount, address tokenAddress, address bridge) private {
+        IERC20(tokenAddress).approve(address(this), amount);
         IERC20(tokenAddress).safeTransferFrom(msg.sender, address(this), amount);
-        IERC20(tokenAddress).approve(bridge, 0);
         IERC20(tokenAddress).approve(bridge, amount);
     }
 
@@ -180,20 +178,18 @@ contract L1TWAMMBridge is Ownable {
         uint256 fee,
         uint128 start,
         uint128 end,
-        uint128 amount,
-        uint256 tokenBridgeAddress
+        uint128 amount
     ) internal pure returns (uint256[] memory) {
-        uint256[] memory payload = new uint256[](9);
+        uint256[] memory payload = new uint256[](8);
 
         payload[0] = uint256(0); // deposit operation
         payload[1] = uint256(uint160(sender));
-        payload[2] = sellToken; // already uint256
-        payload[3] = buyToken; // already uint256
+        payload[2] = sellToken;
+        payload[3] = buyToken;
         payload[4] = uint256(fee);
         payload[5] = uint256(start);
         payload[6] = uint256(end);
         payload[7] = uint256(amount);
-        payload[8] = tokenBridgeAddress; // already uint256
 
         return payload;
     }
@@ -203,7 +199,7 @@ contract L1TWAMMBridge is Ownable {
         pure
         returns (uint256[] memory)
     {
-        uint256[] memory payload = new uint256[](9);
+        uint256[] memory payload = new uint256[](8);
 
         payload[0] = WITHDRAWAL_OPERATION;
         payload[1] = uint256(uint160(sender));
@@ -213,7 +209,6 @@ contract L1TWAMMBridge is Ownable {
         payload[5] = 0; // placeholder
         payload[6] = 0; // placeholder
         payload[7] = amount;
-        payload[8] = 0;
 
         return payload;
     }

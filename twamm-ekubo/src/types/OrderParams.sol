@@ -10,5 +10,4 @@ struct OrderParams {
     uint128 start;
     uint128 end;
     uint128 amount;
-    uint256 l2EndpointAddress;
 }

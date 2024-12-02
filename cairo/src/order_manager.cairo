@@ -197,6 +197,8 @@ mod OrderManagerComponent {
             let helper = ITokenBridgeHelperDispatcher { contract_address: token_bridge_helper_address };
             let l2_bridge = helper.get_l2_bridge_from_l1_token(message.buy_token.try_into().unwrap());
             let token_bridge = ITokenBridgeDispatcher { contract_address: l2_bridge };
+
+            // This would fail if the amount being withdrawn is zero 
             // token_bridge.initiate_token_withdraw(message.buy_token.try_into().unwrap(), depositor, amount_sold.into());
 
             // Emit event
