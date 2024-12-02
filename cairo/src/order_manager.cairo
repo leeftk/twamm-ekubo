@@ -105,8 +105,7 @@ mod OrderManagerComponent {
             message: OrderDetails
         ) {
             // Calculate start and end times for the order
-            let difference = 16 - (message.start % 16);
-            let start_time = message.start + difference;
+            let start_time = message.start;
             let end_time = message.end;
 
             let new_sell_token: ContractAddress = message.sell_token.try_into().unwrap();
