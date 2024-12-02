@@ -5,7 +5,8 @@ import "forge-std/Test.sol";
 import "../src/L1TWAMMBridge.sol";
 import "./mocks/MockERC20.sol";
 import "./mocks/MockStarknetTokenBridge.sol";
-import { OrderParams } from "../src/types/OrderParams.sol";
+import {OrderParams} from "../src/types/OrderParams.sol";
+import {IStarknetMessaging} from "../src/interfaces/IStarknetMessaging.sol";
 
 contract L1TWAMMBridgeTest is Test {
     L1TWAMMBridge public bridge;
@@ -14,20 +15,24 @@ contract L1TWAMMBridgeTest is Test {
 
     event DepositAndCreateOrder(address indexed l1Sender, uint256 indexed l2Recipient, uint256 amount, uint256 nonce);
 
-    address public user = address(0x1);
+    address public user = address(0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045);
     address public l2BridgeAddress = address(456);
     address public l2TokenAddress = address(789);
     address public l2EkuboAddress = address(1);
-    uint256 public l2EndpointAddress = uint256(0x0455c60bbd52b3b57076a0180e7588df61046366ad5a48bc277c974518f837c4);
-
+    uint256 public l2EndpointAddress = uint256(0x820ab2bc3e99e3522daabb53c0da6da0e3e584da48c013d1f4cb762d1f936b);
     //end - start should % 16 = 0
 
-    // Ensure (end - start) is always divisible by 16
-    uint128 public start = uint128((block.timestamp / 16) * 16); // Round down to nearest multiple of 16
-    uint128 public end = start + 64; // 1600 is divisible by 16
+    uint128 public currentTimestamp = uint128(block.timestamp);
+    uint128 public difference = 16 - (currentTimestamp % 16);
+    uint128 public start = currentTimestamp + difference;
+    uint128 public end = start + DEFAULT_DURATION;
 
-    uint128 public fee = 0.01 ether;
+    uint128 public fee = 0.001 ether;
     address public rocketPoolAddress = 0xae78736Cd615f374D3085123A210448E74Fc6393;
+    uint128 constant DEFAULT_AMOUNT = 100 ether;
+    uint128 constant INITIAL_USER_BALANCE = 1000 ether;
+    uint128 constant DEFAULT_DURATION = 64;
+    uint128 constant DEFAULT_FEE = 170141183460469235273462165868118016;
 
     event DepositWithMessage(
         address indexed sender,
@@ -69,18 +74,19 @@ contract L1TWAMMBridgeTest is Test {
         console.log("Initial ETH balance of user:", user.balance);
 
         vm.startPrank(user);
-        token.approve(address(bridge), amount);
+        token.approve(address(bridge), UINT256_MAX);
         token.transfer(address(bridge), amount);
 
         vm.stopPrank();
-        vm.prank(address(bridge));
-        token.approve(address(0xCA14057f85F2662257fd2637FdEc558626bCe554), amount);
+        // vm.prank(address(bridge));
+        // token.approve(address(bridge), UINT256_MAX);
 
         vm.prank(user);
-        bridge.deposit{value: 0.01 ether}(amount, l2EndpointAddress);
+        bridge.deposit{value: 0.001 ether}(amount, l2EndpointAddress);
+        vm.stopPrank();
     }
 
-    function testDepositWithMessage() public {
+    function testDepositAndCreateOrder() public {
         uint256 amount = 1 ether;
 
         // Debug logs to understand initial state
@@ -89,40 +95,31 @@ contract L1TWAMMBridgeTest is Test {
         console.log("Initial DAI balance of bridge:", token.balanceOf(address(bridge)));
 
         vm.startPrank(user);
-
-        // First approve and transfer tokens
-        token.approve(address(bridge), amount);
+        token.approve(address(bridge), UINT256_MAX);
         token.transfer(address(bridge), amount);
+        vm.stopPrank();
+
+        // Set up bridge approval separately
+        vm.startPrank(address(bridge));
+        token.approve(address(0xCA14057f85F2662257fd2637FdEc558626bCe554), UINT256_MAX);
+        vm.stopPrank();
 
         // Debug logs after transfer
         console.log("DAI balance of user after transfer:", token.balanceOf(user));
         console.log("DAI balance of bridge after transfer:", token.balanceOf(address(bridge)));
 
-        // Bridge needs to approve Starknet bridge
-        vm.stopPrank();
-        vm.prank(address(bridge));
-        token.approve(address(0xCA14057f85F2662257fd2637FdEc558626bCe554), amount);
+        OrderParams memory params = OrderParams({
+            sender: user,
+            sellToken: uint256(0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d),
+            buyToken: uint256(0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8),
+            fee: DEFAULT_FEE,
+            start: start,
+            end: end,
+            amount: DEFAULT_AMOUNT
+        });
 
-        vm.startPrank(user);
-
-        // Let's try with a specific payload structure
-        uint256[] memory payload = new uint256[](3);
-        payload[0] = uint256(uint160(address(token))); // token address
-        payload[1] = uint256(uint160(user)); // from address
-        payload[2] = amount; // amount
-
-        // Debug log the payload
-        console.log("Payload[0] (token):", payload[0]);
-        console.log("Payload[1] (from):", payload[1]);
-        console.log("Payload[2] (amount):", payload[2]);
-
-        try bridge.depositWithMessage{value: 0.01 ether}(amount, l2EndpointAddress, payload) {
-            console.log("Deposit succeeded");
-        } catch Error(string memory reason) {
-            console.log("Deposit failed with reason:", reason);
-        } catch (bytes memory) {
-            console.log("Deposit failed with low-level error");
-        }
+        vm.prank(user);
+        bridge.depositAndCreateOrder{value: 0.001 ether}(params);
 
         vm.stopPrank();
     }
@@ -158,7 +155,7 @@ contract L1TWAMMBridgeTest is Test {
 
         vm.expectRevert();
         vm.prank(user);
-        bridge.initiateWithdrawal(id);
+        bridge.initiateWithdrawal(id, address(token));
     }
 
     function testInvalidTimeRange() public {
@@ -174,8 +171,7 @@ contract L1TWAMMBridgeTest is Test {
             fee,
             start,
             start + 64,
-            amount,
-            l2EndpointAddress
+            amount
         );
         bridge.depositAndCreateOrder(
           order
@@ -194,5 +190,24 @@ contract L1TWAMMBridgeTest is Test {
         vm.expectRevert();
         vm.prank(user);
         bridge.removeSupportedToken(address(token));
+    }
+
+    function testGetBridge() public view {
+        address token_bridge = IStarknetRegistry(0x1268cc171c54F2000402DfF20E93E60DF4c96812).getBridge(
+            address(0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766)
+        );
+        console.log("Bridge:", token_bridge);
+    }
+
+    function testInvalidInitiateCancelDepositRequest() public {
+        //should revert with the wrong nonce
+        vm.expectRevert("NO_MESSAGE_TO_CANCEL");
+        bridge.initiateCancelDepositRequest(address(token), 100, 0);
+    }
+
+      function testInvalidInitiateDepositReclaim() public {
+        //should revert with the wrong nonce
+        vm.expectRevert("NO_MESSAGE_TO_CANCEL");
+        bridge.initiateDepositReclaim(address(token), 100, 10631);
     }
 }

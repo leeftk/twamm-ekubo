@@ -1,0 +1,59 @@
+{
+  "transactions": [
+    {
+      "hash": "0x03bda4dd9d0c3ef33c75b6718833a6ee6b5403759fce536e97dc12eb91dcd61a",
+      "transactionType": "CALL",
+      "contractName": "StarkNetToken",
+      "contractAddress": "0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766",
+      "function": "approve(address,uint256)",
+      "arguments": [
+        "0x7eb4C59eABE1234E8A6D02FdF4d1BB595C4702Cd",
+        "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0xddb342ecc94236c29a5307d3757d0724d759453c",
+        "to": "0xca14007eff0db1f8135f4c25b34de49ab0d42766",
+        "gas": "0x93a9",
+        "value": "0x0",
+        "data": "0x095ea7b30000000000000000000000007eb4c59eabe1234e8a6d02fdf4d1bb595c4702cdffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "nonce": "0x36e",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    },
+    {
+      "hash": null,
+      "transactionType": "CALL",
+      "contractName": null,
+      "contractAddress": "0x7eb4C59eABE1234E8A6D02FdF4d1BB595C4702Cd",
+      "function": "setL2EndpointAddress(uint256)",
+      "arguments": [
+        "3516556035308237162048863010366185343835512206238428209035254554024777858934"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0xddb342ecc94236c29a5307d3757d0724d759453c",
+        "to": "0x7eb4c59eabe1234e8a6d02fdf4d1bb595c4702cd",
+        "gas": "0xabab",
+        "value": "0x0",
+        "data": "0x5155fb2f07c64cd8c107a46ededec6721ca978c24178bb32e779ef54ef52cbbc6e53bf76",
+        "nonce": "0x36f",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    }
+  ],
+  "receipts": [],
+  "libraries": [],
+  "pending": [
+    "0x03bda4dd9d0c3ef33c75b6718833a6ee6b5403759fce536e97dc12eb91dcd61a"
+  ],
+  "returns": {},
+  "timestamp": 1732638200,
+  "chain": 11155111,
+  "multi": false,
+  "commit": "1254ada"
+}

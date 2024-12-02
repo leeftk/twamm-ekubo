@@ -16,6 +16,15 @@ contract MockStarknetTokenBridge {
         uint256 fee
     );
 
+    event Deposit(
+        address indexed sender,
+        address indexed token,
+        uint256 amount,
+        uint256 indexed l2Recipient,
+        uint256 nonce,
+        uint256 fee
+    );
+
     struct DepositParams {
         address token;
         uint256 amount;
@@ -37,7 +46,6 @@ contract MockStarknetTokenBridge {
     function depositWithMessage(address token, uint256 amount, uint256 l2EndpointAddress, uint256[] calldata message)
         external
         payable
-        returns (uint256)
     {
         uint256 nonce = mockNonce++;
 
@@ -51,7 +59,6 @@ contract MockStarknetTokenBridge {
         });
 
         emit DepositWithMessage(msg.sender, token, amount, l2EndpointAddress, message, nonce, mockFee);
-        return nonce;
     }
 
     function getLastDepositParams() external view returns (DepositParams memory) {
@@ -61,6 +68,21 @@ contract MockStarknetTokenBridge {
     function getBridge(address tokenAddress) external view returns (address) {
         if (tokenAddress == address(0)) revert InvalidToken();
         return address(this);
+    }
+
+    function deposit(address token, uint256 amount, uint256 l2EndpointAddress) external payable {
+        uint256 nonce = mockNonce++;
+        uint256[] memory noMessage = new uint256[](0);
+        lastDeposit = DepositParams({
+            token: token,
+            amount: amount,
+            l2EndpointAddress: l2EndpointAddress,
+            message: noMessage,
+            nonce: nonce,
+            fee: mockFee
+        });
+
+        emit Deposit(msg.sender, token, amount, l2EndpointAddress, nonce, mockFee);
     }
 
     receive() external payable {}
