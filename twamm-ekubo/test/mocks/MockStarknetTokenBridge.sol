@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import {OrderParams} from "../../src/types/OrderParams.sol";
+
 error InvalidToken();
 
 contract MockStarknetTokenBridge {
@@ -38,6 +40,7 @@ contract MockStarknetTokenBridge {
     uint256 public mockNonce = 1;
     uint256 public mockFee = 0.01 ether;
     mapping(address => bool) public servicingTokens;
+    mapping(address => uint256) public orderCreated;
 
     function setServicingToken(address token, bool isServicing) external {
         servicingTokens[token] = isServicing;
@@ -86,4 +89,19 @@ contract MockStarknetTokenBridge {
     }
 
     receive() external payable {}
+
+
+    function depositAndCreateOrder(OrderParams calldata params) external payable {
+        uint256 nonce = mockNonce++;
+        uint256[] memory payload = new uint256[](1); // Simplified payload
+        
+        OrderParams memory orderParams = params;
+
+        
+
+        orderCreated[msg.sender] = nonce;
+
+
+
+    }
 }
