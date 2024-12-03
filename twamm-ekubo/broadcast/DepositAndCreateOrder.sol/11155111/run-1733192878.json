@@ -1,0 +1,37 @@
+{
+  "transactions": [
+    {
+      "hash": "0xe26f810d5e755d25cdd47cc01895608c59569cfe9733b440da62dee9c50d54ef",
+      "transactionType": "CALL",
+      "contractName": "StarkNetToken",
+      "contractAddress": "0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766",
+      "function": "approve(address,uint256)",
+      "arguments": [
+        "0x0Ed0e15f0D7362b95A7F4441FCBfb948b63FD61b",
+        "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0xddb342ecc94236c29a5307d3757d0724d759453c",
+        "to": "0xca14007eff0db1f8135f4c25b34de49ab0d42766",
+        "gas": "0x93a9",
+        "value": "0x0",
+        "data": "0x095ea7b30000000000000000000000000ed0e15f0d7362b95a7f4441fcbfb948b63fd61bffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "nonce": "0x3b0",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    }
+  ],
+  "receipts": [],
+  "libraries": [],
+  "pending": [
+    "0xe26f810d5e755d25cdd47cc01895608c59569cfe9733b440da62dee9c50d54ef"
+  ],
+  "returns": {},
+  "timestamp": 1733192878,
+  "chain": 11155111,
+  "multi": false,
+  "commit": "67ce98f"
+}
