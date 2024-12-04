@@ -12,7 +12,7 @@ interface IL1TWAMMBridge {
     function deposit(uint256 amount, uint256 l2EndpointAddress) external payable;
     function initiateWithdrawal(uint256 amount, address l1_token) external payable;
     function _sendMessage(uint256 contractAddress, uint256 selector, uint256[] memory payload) external payable;
-    function setL2EndpointAddress(uint256 _l2EndpointAddress) external; 
+    function setL2EndpointAddress(uint256 _l2EndpointAddress) external;
     function initiateCancelDepositRequest(address l1_token, uint256 amount, uint256 nonce) external;
 }
 
@@ -57,7 +57,7 @@ contract DepositAndCreateOrder is Script {
         // IL1TWAMMBridge(0xcE5485Cfb26914C5dcE00B9BAF0580364daFC7a4).deposit{value: fee}(amount, l2EndpointAddress);
 
         // IL1TWAMMBridge(bridgeAddress).initiateCancelDepositRequest{gas: gasPrice}(0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766, amount, 10631);
-        IL1TWAMMBridge(bridgeAddress).depositAndCreateOrder{value: fee, gas:gasPrice}(params);
+        IL1TWAMMBridge(bridgeAddress).depositAndCreateOrder{value: fee, gas: gasPrice}(params);
         // uint256 L2_SELECTOR_VALUE = uint256(0x00f1149cade9d692862ad41df96b108aa2c20af34f640457e781d166c98dc6b0);
         // IL1TWAMMBridge(bridgeAddress).initiateWithdrawal{value: fee}(amount, 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238);
         // IL1TWAMMBridge(bridgeAddress).setL2EndpointAddress(l2EndpointAddress);
@@ -65,6 +65,5 @@ contract DepositAndCreateOrder is Script {
         // snMessaging.sendMessageToL2{value: fee}(l2EndpointAddress, L2_SELECTOR_VALUE, withdrawal_message);
         vm.stopBroadcast();
     }
-
 }
 //10576

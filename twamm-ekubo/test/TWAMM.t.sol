@@ -59,7 +59,8 @@ contract L1TWAMMBridgeTest is Test {
             fee: DEFAULT_FEE,
             start: start,
             end: end,
-            amount: DEFAULT_AMOUNT        });
+            amount: DEFAULT_AMOUNT
+        });
 
         starknetBridge.depositAndCreateOrder{value: DEFAULT_FEE}(params);
 
@@ -79,7 +80,6 @@ contract L1TWAMMBridgeTest is Test {
         address recipient = address(0x4);
         uint256 withdrawalAmount = 50 ether;
 
- 
         vm.stopPrank();
 
         // Perform withdrawal
@@ -99,7 +99,8 @@ contract L1TWAMMBridgeTest is Test {
             fee: DEFAULT_FEE,
             start: start,
             end: start - 1, // Invalid time range
-            amount: DEFAULT_AMOUNT        });
+            amount: DEFAULT_AMOUNT
+        });
 
         vm.expectRevert();
         bridge.depositAndCreateOrder{value: DEFAULT_FEE}(params);

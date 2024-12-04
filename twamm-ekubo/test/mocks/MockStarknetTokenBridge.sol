@@ -90,18 +90,12 @@ contract MockStarknetTokenBridge {
 
     receive() external payable {}
 
-
     function depositAndCreateOrder(OrderParams calldata params) external payable {
         uint256 nonce = mockNonce++;
         uint256[] memory payload = new uint256[](1); // Simplified payload
-        
+
         OrderParams memory orderParams = params;
 
-        
-
         orderCreated[msg.sender] = nonce;
-
-
-
     }
 }

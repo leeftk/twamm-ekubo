@@ -26,6 +26,7 @@ interface IStarknetRegistry {
 
 /// @title L1TWAMMBridge
 /// @notice Facilitates bridging tokens from Ethereum (L1) to StarkNet (L2) for TWAMM orders
+/// @dev Handles token deposits, withdrawals, and order creation across L1 and L2
 contract L1TWAMMBridge is Ownable {
     using SafeERC20 for IERC20;
 
@@ -64,6 +65,12 @@ contract L1TWAMMBridge is Ownable {
     error NotSupportedToken();
     error ZeroValue();
 
+    /// @notice Creates a new L1TWAMMBridge instance
+    /// @param _token Address of the token to be bridged
+    /// @param _starknetBridge Address of the StarkNet bridge contract
+    /// @param _l2EkuboAddress Address of the L2 Ekubo contract
+    /// @param _l2EndpointAddress Address of the L2 endpoint
+    /// @param _starknetRegistry Address of the StarkNet registry contract
     constructor(
         address _token,
         address _starknetBridge,
@@ -87,11 +94,16 @@ contract L1TWAMMBridge is Ownable {
     }
 
     /// @notice Validates if a bridge exists for the given token
+    /// @param tokenAddress The address of the token to validate
+    /// @return bool True if a valid bridge exists, false otherwise
     function validateBridge(address tokenAddress) internal view returns (bool) {
         address bridge = starknetRegistry.getBridge(tokenAddress);
         return bridge != address(0);
     }
 
+    /// @notice Deposits tokens and creates an order on L2
+    /// @param params Order parameters including amount, tokens, time range, and fees
+    /// @dev Requires msg.value to cover bridge fees
     function depositAndCreateOrder(OrderParams memory params) external payable {
         if (!validateBridge(address(token))) revert InvalidBridge();
         if (msg.value == 0) revert ZeroValue();
@@ -99,19 +111,17 @@ contract L1TWAMMBridge is Ownable {
         address tokenBridge = starknetRegistry.getBridge(address(token));
         _handleTokenTransfer(params.amount, address(token), tokenBridge);
         uint256[] memory payload = _encodeDepositPayload(
-            msg.sender,
-            params.sellToken,
-            params.buyToken,
-            params.fee,
-            params.start,
-            params.end,
-            params.amount
+            msg.sender, params.sellToken, params.buyToken, params.fee, params.start, params.end, params.amount
         );
         _depositWithMessage(params.amount, payload, address(starknetBridge));
 
         emit DepositAndCreateOrder(msg.sender, l2EndpointAddress, params.amount, DEFAULT_NONCE);
     }
 
+    /// @notice Initiates a withdrawal from L2 to L1
+    /// @param amount Amount of tokens to withdraw
+    /// @param l1_token Address of the L1 token to receive
+    /// @dev Requires msg.value to cover messaging fees
     function initiateWithdrawal(uint256 amount, address l1_token) external payable {
         uint256[] memory message = _encodeWithdrawalPayload(msg.sender, l1_token, amount);
 
@@ -120,29 +130,47 @@ contract L1TWAMMBridge is Ownable {
         emit WithdrawalInitiated(msg.sender, amount);
     }
 
+    /// @notice Initiates a request to cancel a deposit
+    /// @param l1_token Address of the token being deposited
+    /// @param amount Amount of tokens being deposited
+    /// @param nonce Unique identifier for the deposit
     function initiateCancelDepositRequest(address l1_token, uint256 amount, uint256 nonce) external {
         address tokenBridge = starknetRegistry.getBridge(address(token));
         IStarknetTokenBridge(tokenBridge).depositCancelRequest(l1_token, amount, l2EndpointAddress, nonce);
     }
 
+    /// @notice Reclaims tokens from a cancelled deposit
+    /// @param l1_token Address of the token to reclaim
+    /// @param amount Amount of tokens to reclaim
+    /// @param nonce Unique identifier for the deposit
     function initiateDepositReclaim(address l1_token, uint256 amount, uint256 nonce) external {
         address tokenBridge = starknetRegistry.getBridge(address(token));
         IStarknetTokenBridge(tokenBridge).depositReclaim(l1_token, amount, l2EndpointAddress, nonce);
     }
 
-    /// @notice Sets the L2 endpoint address
+    /// @notice Updates the L2 endpoint address
+    /// @param _l2EndpointAddress New L2 endpoint address
+    /// @dev Can only be called by the contract owner
     function setL2EndpointAddress(uint256 _l2EndpointAddress) external onlyOwner {
         l2EndpointAddress = _l2EndpointAddress;
         emit L2EndpointAddressSet(_l2EndpointAddress);
     }
 
     // Internal functions
+    /// @notice Validates an array of addresses
+    /// @param addresses Array of addresses to validate
+    /// @param errorContext Context string for error messages
+    /// @dev Reverts if any address is zero
     function _validateAddresses(address[] memory addresses, string memory errorContext) private pure {
         for (uint256 i = 0; i < addresses.length; i++) {
             if (addresses[i] == address(0)) revert ZeroAddress(errorContext);
         }
     }
 
+    /// @notice Validates start and end time parameters
+    /// @param start Start time for the order
+    /// @param end End time for the order
+    /// @dev Reverts if times are invalid or out of range
     function _validateTimeParams(uint128 start, uint128 end) private view {
         if (start >= end) revert InvalidTimeRange();
 
@@ -152,10 +180,18 @@ contract L1TWAMMBridge is Ownable {
         }
     }
 
+    /// @notice Sends a message to L2
+    /// @param contractAddress Target contract address on L2
+    /// @param selector Function selector on L2
+    /// @param payload Message payload
     function _sendMessage(uint256 contractAddress, uint256 selector, uint256[] memory payload) public payable {
         snMessaging.sendMessageToL2{value: msg.value}(contractAddress, selector, payload);
     }
 
+    /// @notice Deposits tokens and sends a message to L2
+    /// @param amount Amount of tokens to deposit
+    /// @param message Message payload for L2
+    /// @param tokenBridgeAddress Address of the token bridge
     function _depositWithMessage(uint256 amount, uint256[] memory message, address tokenBridgeAddress) public payable {
         uint256 estimatedDepositFee = IStarknetTokenBridge(tokenBridgeAddress).estimateDepositFeeWei();
         uint256 messageFee = msg.value - estimatedDepositFee;
@@ -165,12 +201,25 @@ contract L1TWAMMBridge is Ownable {
         snMessaging.sendMessageToL2{value: messageFee}(l2EndpointAddress, ON_RECEIVE_SELECTOR, message);
     }
 
+    /// @notice Handles the transfer of tokens from sender to bridge
+    /// @param amount Amount of tokens to transfer
+    /// @param tokenAddress Address of the token
+    /// @param bridge Address of the bridge contract
     function _handleTokenTransfer(uint256 amount, address tokenAddress, address bridge) private {
         IERC20(tokenAddress).approve(address(this), amount);
         IERC20(tokenAddress).safeTransferFrom(msg.sender, address(this), amount);
         IERC20(tokenAddress).approve(bridge, amount);
     }
 
+    /// @notice Encodes the payload for a deposit operation
+    /// @param sender Address of the sender
+    /// @param sellToken Token to sell
+    /// @param buyToken Token to buy
+    /// @param fee Fee amount
+    /// @param start Start time
+    /// @param end End time
+    /// @param amount Amount of tokens
+    /// @return Encoded payload array
     function _encodeDepositPayload(
         address sender,
         uint256 sellToken,
@@ -194,6 +243,11 @@ contract L1TWAMMBridge is Ownable {
         return payload;
     }
 
+    /// @notice Encodes the payload for a withdrawal operation
+    /// @param sender Address of the sender
+    /// @param l1Token Address of the L1 token
+    /// @param amount Amount of tokens
+    /// @return Encoded payload array
     function _encodeWithdrawalPayload(address sender, address l1Token, uint256 amount)
         internal
         pure
@@ -213,6 +267,10 @@ contract L1TWAMMBridge is Ownable {
         return payload;
     }
 
+    /// @notice Validates if a given time is valid according to spacing rules
+    /// @param now_ Current timestamp
+    /// @param time Time to validate
+    /// @return bool True if time is valid, false otherwise
     function _isTimeValid(uint256 now_, uint256 time) internal pure returns (bool) {
         uint256 step;
         if (time <= (now_ + TIME_SPACING_SIZE)) {
@@ -226,6 +284,9 @@ contract L1TWAMMBridge is Ownable {
         return time % step == 0;
     }
 
+    /// @notice Calculates the most significant bit of a number
+    /// @param x Number to analyze
+    /// @return Position of the most significant bit
     function _mostSignificantBit(uint256 x) internal pure returns (uint256) {
         if (x == 0) return 0;
 
@@ -237,21 +298,11 @@ contract L1TWAMMBridge is Ownable {
         return result - 1;
     }
 
-    // External view functions
+    /// @notice External function to validate time parameters
+    /// @param start Start time to validate
+    /// @param end End time to validate
+    /// @return bool True if both times are valid
     function isTimeValidExternal(uint256 start, uint256 end) external pure returns (bool) {
         return _isTimeValid(start, end);
-    }
-
-    // -----------------------------------------
-    // Functions strictly for testing
-
-    function removeSupportedToken(address _token) external onlyOwner {
-        supportedTokens[_token] = false;
-        emit SupportedTokenRemoved(_token);
-    }
-
-    function deposit(uint256 amount, uint256 l2Recipient) external payable {
-        token.approve(address(starknetBridge), amount);
-        starknetBridge.deposit{value: msg.value}(address(token), amount, l2EndpointAddress);
     }
 }

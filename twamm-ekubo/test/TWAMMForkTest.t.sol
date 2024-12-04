@@ -82,7 +82,7 @@ contract L1TWAMMBridgeTest is Test {
         // token.approve(address(bridge), UINT256_MAX);
 
         vm.prank(user);
-        bridge.deposit{value: 0.001 ether}(amount, l2EndpointAddress);
+        //bridge.deposit{value: 0.001 ether}(amount, l2EndpointAddress);
         vm.stopPrank();
     }
 
@@ -124,29 +124,6 @@ contract L1TWAMMBridgeTest is Test {
         vm.stopPrank();
     }
 
-    function testInitiateWithdrawal() public {
-        uint128 amount = 100 ether;
-        address l1Recipient = address(0x3);
-        uint64 id = 1;
-        uint128 saleRateDelta = 50 ether;
-        // First, deposit some tokens to the bridge
-        vm.startPrank(user);
-        // token.approve(address(bridge), amount);
-        // bridge.depositAndCreateOrder{value: 0.01 ether}(
-        //     amount, l2EndpointAddress, start, end, address(token), address(token), fee
-        // );
-        // vm.stopPrank();
-
-        // // Now initiate withdrawal
-        // vm.expectEmit(true, false, false, true);
-        // emit WithdrawalInitiated(l1Recipient, saleRateDelta);
-
-        // vm.prank(bridge.owner());
-        // bridge.initiateWithdrawal{value: 0.01 ether}(
-        //     address(token), l1Recipient, amount
-        // );
-    }
-
     function testInitiateWithdrawalUnauthorized() public {
         uint64 id = 1;
         uint128 saleRateDelta = 50 ether;
@@ -173,23 +150,8 @@ contract L1TWAMMBridgeTest is Test {
             start + 64,
             amount
         );
-        bridge.depositAndCreateOrder(
-          order
-        );
+        bridge.depositAndCreateOrder(order);
         vm.stopPrank();
-    }
-
-    function testRemoveSupportedToken() public {
-        vm.prank(bridge.owner());
-        bridge.removeSupportedToken(address(token));
-
-        assertEq(bridge.supportedTokens(address(token)), false, "Token should be removed from supported tokens");
-    }
-
-    function testRemoveSupportedTokenUnauthorized() public {
-        vm.expectRevert();
-        vm.prank(user);
-        bridge.removeSupportedToken(address(token));
     }
 
     function testGetBridge() public view {
@@ -205,7 +167,7 @@ contract L1TWAMMBridgeTest is Test {
         bridge.initiateCancelDepositRequest(address(token), 100, 0);
     }
 
-      function testInvalidInitiateDepositReclaim() public {
+    function testInvalidInitiateDepositReclaim() public {
         //should revert with the wrong nonce
         vm.expectRevert("NO_MESSAGE_TO_CANCEL");
         bridge.initiateDepositReclaim(address(token), 100, 10631);
