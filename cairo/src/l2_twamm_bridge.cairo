@@ -18,8 +18,6 @@ use super::errors::{ERROR_UNAUTHORIZED};
 
 #[starknet::interface]
 pub trait IL2TWAMMBridge<TContractState> {
-    fn set_positions_address(ref self: TContractState, address: ContractAddress);
-    fn set_token_bridge_address(ref self: TContractState, address: ContractAddress);
     fn set_token_bridge_helper(ref self: TContractState, address: ContractAddress);
     fn get_contract_owner(self: @TContractState) -> ContractAddress;
     fn get_token_bridge_helper(self: @TContractState) -> ContractAddress;
@@ -50,12 +48,8 @@ mod L2TWAMMBridge {
     // Storage
     #[storage]
     pub struct Storage {
-        sender_to_amount: Map::<EthAddress, u256>,
-        positions_address: ContractAddress,
-        token_bridge_address: ContractAddress,
         contract_owner_address: ContractAddress,
         token_bridge_helper: ContractAddress,
-        order_manager_address: ContractAddress,
 
         #[substorage(v0)]
         order_manager: OrderManagerComponent::Storage
@@ -101,21 +95,8 @@ mod L2TWAMMBridge {
     #[external(v0)]
     #[abi(embed_v0)]
     impl L2TWAMMBridge of super::IL2TWAMMBridge<ContractState> {
-        // Admin functions to set contract addresses
 
-        // Sets token bridge address (owner only)
-        fn set_token_bridge_address(ref self: ContractState, address: ContractAddress) {
-            self.assert_only_owner();
-            self.token_bridge_address.write(address);
-        }
-
-        // Sets positions contract address (owner only)
-        fn set_positions_address(ref self: ContractState, address: ContractAddress) {
-            self.assert_only_owner();
-            self.positions_address.write(address);
-        }
-
-        // Sets token bridge helper address (owner only)
+        // Admin functionsto set token bridge helper address
         fn set_token_bridge_helper(ref self: ContractState, address: ContractAddress) {
             self.assert_only_owner();
             self.token_bridge_helper.write(address);
@@ -141,7 +122,7 @@ mod L2TWAMMBridge {
         }
         // Processes withdrawal message from L1
         fn handle_withdrawal(ref self: ContractState, message: OrderDetails) {
-            self.order_manager.execute_withdrawal(message, self.positions_address.read(), self.token_bridge_helper.read());
+            self.order_manager.execute_withdrawal(message, self.token_bridge_helper.read());
         }
         // Only Owner modifier
         fn assert_only_owner(ref self: ContractState) {

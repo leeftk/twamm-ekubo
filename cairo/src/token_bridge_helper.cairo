@@ -26,8 +26,6 @@ mod TokenBridgeHelper {
     // Storage
     #[storage]
     struct Storage {
-        l2_bridge_to_l2_token: Map::<ContractAddress, ContractAddress>,
-        l2_token_to_l1_token: Map::<ContractAddress, EthAddress>,
         l1_token_to_l2_token_bridge: Map::<felt252, ContractAddress>,
         contract_owner: ContractAddress,
     }
@@ -76,5 +74,3 @@ mod TokenBridgeHelper {
         }
     }
 }
-
-//0xaa505f682c4e8375644c8250c2dc0a703ad013459ae70a9afa68d3a28ab176
