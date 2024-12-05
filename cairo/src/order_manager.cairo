@@ -16,7 +16,7 @@ trait IOrderManager<TContractState> {
     fn create_order_key( ref self: TContractState ,message: OrderDetails) -> OrderKey;
     fn decode_order_key_from_stored_copy( ref self: TContractState, stored_key: OrderKey_Copy) -> OrderKey;
     fn execute_deposit( ref self: TContractState, message: OrderDetails);
-    fn execute_withdrawal( ref self: TContractState, message: OrderDetails, positions_address: ContractAddress, token_bridge_helper_address: ContractAddress);
+    fn execute_withdrawal( ref self: TContractState, message: OrderDetails, token_bridge_helper_address: ContractAddress);
     fn get_depositor_from_id( ref self: TContractState ,id: u64) -> EthAddress;
     fn get_id_from_depositor( ref self: TContractState, depositor: EthAddress) -> u64;
     fn get_withdrawal_status( ref self: TContractState, depositor: EthAddress, id: u64) -> bool;
@@ -116,14 +116,8 @@ mod OrderManagerComponent {
             assert(message.amount.try_into().unwrap() <= U128_MAX, 'Amount exceeds u128 max');
             let amount_u128: u128 = message.amount.try_into().unwrap();
 
-            // Create an OrderKey instance with the new sell token, buy token, fee, start time, and end time
-            let order_key = OrderKey {
-                sell_token: new_sell_token,
-                buy_token: new_buy_token,
-                fee: new_fee,
-                start_time: start_time,
-                end_time: end_time,
-            };
+            // Create an OrderKey instance with the message details
+            let order_key = self.create_order_key(message);
 
             // Create an OrderKey_Copy instance with the same details as the OrderKey for storage purposes
             let order_key_copy = OrderKey_Copy {
@@ -161,7 +155,6 @@ mod OrderManagerComponent {
         fn execute_withdrawal(
              ref self: ComponentState<TContractState>,
             message: OrderDetails,
-            positions_address: ContractAddress,
             token_bridge_helper_address: ContractAddress
         ) {
             let depositor: EthAddress = message.sender.try_into().unwrap();
