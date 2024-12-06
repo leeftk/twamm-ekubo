@@ -24,7 +24,7 @@ url = "https://free-rpc.nethermind.io/mainnet-juno"
 block_id.number = "776530"
 
 [dev-dependencies]
-snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", tag = "v0.30.0" }
+snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", tag = "v0.32.0" }
 assert_macros = "2.8.2"
 
 [[target.starknet-contract]]

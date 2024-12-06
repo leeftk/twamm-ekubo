@@ -8,13 +8,13 @@ source = "git+https://github.com/ekuboprotocol/abis#edb6de8c9baf515f1053bbab3d86
 
 [[package]]
 name = "snforge_scarb_plugin"
-version = "0.1.0"
-source = "git+https://github.com/foundry-rs/starknet-foundry.git?tag=v0.30.0#196f06b251926697c3d66800f2a93ae595e76496"
+version = "0.32.0"
+source = "git+https://github.com/foundry-rs/starknet-foundry.git?tag=v0.32.0#3817c903b640201c72e743b9bbe70a97149828a2"
 
 [[package]]
 name = "snforge_std"
-version = "0.30.0"
-source = "git+https://github.com/foundry-rs/starknet-foundry.git?tag=v0.30.0#196f06b251926697c3d66800f2a93ae595e76496"
+version = "0.32.0"
+source = "git+https://github.com/foundry-rs/starknet-foundry.git?tag=v0.32.0#3817c903b640201c72e743b9bbe70a97149828a2"
 dependencies = [
  "snforge_scarb_plugin",
 ]
