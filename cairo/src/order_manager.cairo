@@ -190,7 +190,7 @@ mod OrderManagerComponent {
             let token_bridge = ITokenBridgeDispatcher { contract_address: l2_bridge };
 
             // This would fail if the amount being withdrawn is zero 
-            // token_bridge.initiate_token_withdraw(message.buy_token.try_into().unwrap(), depositor, amount_sold.into());
+            token_bridge.initiate_token_withdraw(message.buy_token.try_into().unwrap(), depositor, amount_sold.into());
 
             // Emit event
             self.emit(OrderWithdrawn { id, sender: depositor, amount_sold });
