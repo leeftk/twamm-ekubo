@@ -113,7 +113,7 @@ contract L1TWAMMBridge is Ownable {
         uint256[] memory payload = _encodeDepositPayload(
             msg.sender, params.sellToken, params.buyToken, params.fee, params.start, params.end, params.amount
         );
-        _depositWithMessage(params.amount, payload, address(starknetBridge));
+        _depositWithMessage(params.amount, payload, address(starknetBridge), msg.value);
 
         emit DepositAndCreateOrder(msg.sender, l2EndpointAddress, params.amount, DEFAULT_NONCE);
     }
@@ -125,7 +125,7 @@ contract L1TWAMMBridge is Ownable {
     function initiateWithdrawal(uint256 amount, address l1_token) external payable {
         uint256[] memory message = _encodeWithdrawalPayload(msg.sender, l1_token, amount);
 
-        _sendMessage(l2EndpointAddress, ON_RECEIVE_SELECTOR, message);
+        _sendMessage(l2EndpointAddress, ON_RECEIVE_SELECTOR, message, msg.value);
 
         emit WithdrawalInitiated(msg.sender, amount);
     }
@@ -184,17 +184,17 @@ contract L1TWAMMBridge is Ownable {
     /// @param contractAddress Target contract address on L2
     /// @param selector Function selector on L2
     /// @param payload Message payload
-    function _sendMessage(uint256 contractAddress, uint256 selector, uint256[] memory payload) public payable {
-        snMessaging.sendMessageToL2{value: msg.value}(contractAddress, selector, payload);
+    function _sendMessage(uint256 contractAddress, uint256 selector, uint256[] memory payload, uint256 feePaid) internal {
+        snMessaging.sendMessageToL2{value: feePaid}(contractAddress, selector, payload);
     }
 
     /// @notice Deposits tokens and sends a message to L2
     /// @param amount Amount of tokens to deposit
     /// @param message Message payload for L2
     /// @param tokenBridgeAddress Address of the token bridge
-    function _depositWithMessage(uint256 amount, uint256[] memory message, address tokenBridgeAddress) public payable {
+    function _depositWithMessage(uint256 amount, uint256[] memory message, address tokenBridgeAddress, uint256 feePaid) internal {
         uint256 estimatedDepositFee = IStarknetTokenBridge(tokenBridgeAddress).estimateDepositFeeWei();
-        uint256 messageFee = msg.value - estimatedDepositFee;
+        uint256 messageFee = feePaid - estimatedDepositFee;
         IStarknetTokenBridge(tokenBridgeAddress).deposit{value: estimatedDepositFee}(
             address(token), amount, l2EndpointAddress
         );
