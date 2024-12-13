@@ -8,6 +8,14 @@
 2. L2TWAMMBridge (Cairo):
    - Receives messages from L1 and processes deposit and withdrawal operations
    - Manages order-related operations through the OrderManagerComponent
+  
+## Helper Contracts
+1. TokenBridgeHelper (Cairo):
+   - Helps to manage the mapping between the L2 token bridges and L1 token addresses
+
+2. OrderManagerComponent
+   - Handles the execute_deposit and execute_withdrawal functionality
+   - Contains all the necessary helper functions for order creation and withdrawal
 
 ## Core Functions
 
@@ -27,42 +35,11 @@ L2TWAMMBridge:
 
 ## Deployment and Script Instructions
 
-To deploy and interact with these contracts:
+### Deploy the L1 Contract
 
-1. Deploy the L1TWAMMBridge contract using the DeployL1TWAMMBridge script.
-
-2. Set up the necessary environment variables for StarkNet deployment.
-
-3. Deploy the L2TWAMMBridge contract on StarkNet Passing the address of the creator in the constructor.
-
-4. Update the L2 endpoint address in the L1TWAMMBridge contract (Not necessary except in a situation when a different L2 endpoint from the one in the constructor is to be used).
-
-5. To create orders:
-   - Approve the required amount of tokens for spending by the L1TWAMMBridge contract.
-   - Call the depositAndCreateOrder function on the L1TWAMMBridge contract, passing the order parameters and sufficient gas fees.
-    
-An Example of Order Parameters
+1. Create an env file in foundry containing your RPC URL as `SEPOLIA_RPC_URL` and your private key as `PRIVATE_KEY`
+2. Create a file in the scripts folder and call it `DeployL1Bridge.sol` and paste this in it
 ```
- OrderParams memory params = OrderParams({
-sender: msg.sender,
-sellToken: sellTokenAddress,
-buyToken: buyTokenAddress,
-fee: 170141183460469235273462165868118016,
-start: start,
-end: end,
-amount: amount
-});
-
-```
-6. To withdraw:
-   - Call the initiateWithdrawal function on the L1TWAMMBridge contract, specifying the amount and L1 token address.
-
-7. Monitor the L2TWAMMBridge contract for received messages and processed deposits/withdrawals.
-
-
-### Sample Deployment script
-```
-
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -91,10 +68,35 @@ uint256 l2EndpointAddress = uint256(0x073710eda3a2a82f548bf0743c3db7fc4cb1273adf
 }
 
 ```
-
-### Sample interaction script
+3. Deploy the L1TWAMMBridge contract using the DeployL1TWAMMBridge script. Copy and Paste this in your terminal
 ```
+forge script --chain sepolia script/DeployL1Bridge.sol:DeployL1TWAMMBridge --rpc-url $SEPOLIA_RPC_URL --private-key $PRIVATE_KEY --broadcast  -vvvv      
+```
+### Deploy the L2 Contract
 
+1. Create and set up your starknet account here: https://foundry-rs.github.io/starknet-foundry/starknet/account.html
+2. Declare the L2TWAMMBridge contract with by copying and pasting this in your terminal.
+```
+sncast --account <account_name>  declare   --url <YOUR_RPC_URL>   --fee-token eth   --contract-name L2TWAMMBridge
+```
+3. Deploy the L2TWAMMBridge contract on StarkNet Passing the address of the creator in the constructor.
+```
+sncast --account <account_name>  deploy  --url <YOUR_RPC_URL>   --fee-token eth   --class-hash <class_hash> --constructor-calldata <YOUR_ADDRESS>
+```
+4. Declare the TokenBridgeHelper by copying and pasting this in the terminal
+```
+sncast --account <account_name>  declare   --url <YOUR_RPC_URL>   --fee-token eth   --contract-name TokenBridgeHelper
+```
+5. Deploy the TokenBridgeHelper by copying and pasting this in the terminal
+```
+sncast --account <account_name>  deploy  --url <YOUR_RPC_URL>   --fee-token eth   --class-hash <class_hash> --constructor-calldata <YOUR_ADDRESS>
+```
+6. Set the TokenBridgeHelper address in the L2TWAMMBridge contract, by calling `set_token_bridge_helper` with the address in starkscan or voyager 
+
+### Interact with the L1 Contract
+
+1. Create a file in the scripts file and call it `DepositAndCreateOrder.sol` and paste this in it.
+```
     // SPDX-License-Identifier: MIT
     pragma solidity ^0.8.20;
 
@@ -167,3 +169,22 @@ uint256 l2EndpointAddress = uint256(0x073710eda3a2a82f548bf0743c3db7fc4cb1273adf
 }
 
 ```
+
+2. To create an order:
+   - Approve the required amount of tokens for spending by the L1TWAMMBridge contract.
+   - Call the `depositAndCreateOrder` function on the L1TWAMMBridge contract, passing the order parameters and sufficient gas fees.
+    
+3. To withdraw:
+   - Call the `initiateWithdrawal` function on the L1TWAMMBridge contract, specifying the amount and L1 token address.
+
+4. To Update the L2 endpoint address in the L1TWAMMBridge contract (Not necessary except in a situation when a different L2 endpoint from the one in the constructor is to be used).
+   - Call the `setL2EndpointAddress` passing in the new L2 Endpoint address
+
+5. To run the script, copy and paste this in your terminal.
+```
+forge script --chain sepolia script/DepositAndCreateOrder.sol:DepositAndCreateOrder --rpc-url $SEPOLIA_RPC_URL --private-key $PRIVATE_KEY  --broadcast -vvvv
+``` 
+
+6. Monitor the L2TWAMMBridge contract for received messages and processed deposits/withdrawals.
+
+
