@@ -17,8 +17,7 @@ dependencies = [
 [[package]]
 name = "sncast_std"
 version = "0.32.0"
-source = "registry+https://scarbs.xyz/"
-checksum = "sha256:7e317d7a8f89b3fe06d73e10223920126c7aa5edf97154795da11ede31bb6ca6"
+source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.32.0#3817c903b640201c72e743b9bbe70a97149828a2"
 
 [[package]]
 name = "twammbridge"

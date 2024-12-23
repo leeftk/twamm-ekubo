@@ -2,14 +2,24 @@
   "version": 1,
   "transactions": {
     "transactions": {
+      "5f696267a2f1b929aa5c4408d727e5091b34d743df4af87e45b4aeb1a1bf5ab5": {
+        "name": "declare",
+        "output": {
+          "type": "ErrorResponse",
+          "message": "Failed to find twammbridge::token_bridge_helper::TokenBridgeHelper artifact in starknet_artifacts.json file. Please make sure you have specified correct package using `--package` flag and that you have enabled sierra and casm code generation in Scarb.toml."
+        },
+        "status": "Error",
+        "timestamp": 1734981699,
+        "misc": null
+      },
       "a66f645f08649394240e04a40e432121b6fab0854c9bb66c81328e1c71610692": {
         "name": "declare",
         "output": {
           "type": "ErrorResponse",
-          "message": "Contract failed the validation = Max fee (999999999999999) exceeds balance (590761873674473)."
+          "message": "Transaction has been rejected"
         },
-        "status": "Error",
-        "timestamp": 1734980320,
+        "status": "Fail",
+        "timestamp": 1734982179,
         "misc": null
       }
     }
