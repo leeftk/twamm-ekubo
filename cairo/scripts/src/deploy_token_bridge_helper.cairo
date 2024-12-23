@@ -26,5 +26,6 @@ fn main() {
 
     assert(deploy_result.transaction_hash != 0, deploy_result.transaction_hash);
 
-    println!("TokenBridgeHelper deploy result: ", deploy_result);
+    println!("deploy result: {}", deploy_result);
+    println!("debug deploy result: {:?}", deploy_result);
 }
