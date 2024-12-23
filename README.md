@@ -75,24 +75,18 @@ forge script --chain sepolia script/DeployL1Bridge.sol:DeployL1TWAMMBridge --rpc
 ### Deploy the L2 Contract
 
 1. Create and set up your starknet account here: https://foundry-rs.github.io/starknet-foundry/starknet/account.html
-2. Declare the L2TWAMMBridge contract with by copying and pasting this in your terminal.
+2. To Deploy the L2 TWAMM Contract, `cd` into scripts and run the code below in your teminal
 ```
-sncast --account <account_name>  declare   --url <YOUR_RPC_URL>   --fee-token eth   --contract-name L2TWAMMBridge
+sncast --account <account_name>  script run deploy_l2_twamm   --url <YOUR_RPC_URL>
 ```
-3. Deploy the L2TWAMMBridge contract on StarkNet Passing the address of the creator in the constructor.
+3. To Deploy the TokenBridgeHelper run the code below in your teminal
 ```
-sncast --account <account_name>  deploy  --url <YOUR_RPC_URL>   --fee-token eth   --class-hash <class_hash> --constructor-calldata <YOUR_ADDRESS>
+sncast --account <account_name>  script run deploy_token_bridge_helper   --url <YOUR_RPC_URL>
 ```
-4. Declare the TokenBridgeHelper by copying and pasting this in the terminal
+4. Set the TokenBridgeHelper address in the L2TWAMMBridge contract, by calling `set_token_bridge_helper` with the address in starkscan or voyager, or go into the `set_l2_token_helper.cairo` file in the scripts folder and pass in the deployed L2 TWAMM contract address, and the TokenBridgeHelper address where necessary, and run the command below
 ```
-sncast --account <account_name>  declare   --url <YOUR_RPC_URL>   --fee-token eth   --contract-name TokenBridgeHelper
+sncast --account <account_name>  script run set_l2_token_helper   --url <YOUR_RPC_URL>
 ```
-5. Deploy the TokenBridgeHelper by copying and pasting this in the terminal
-```
-sncast --account <account_name>  deploy  --url <YOUR_RPC_URL>   --fee-token eth   --class-hash <class_hash> --constructor-calldata <YOUR_ADDRESS>
-```
-6. Set the TokenBridgeHelper address in the L2TWAMMBridge contract, by calling `set_token_bridge_helper` with the address in starkscan or voyager 
-
 ### Interact with the L1 Contract
 
 1. Create a file in the scripts file and call it `DepositAndCreateOrder.sol` and paste this in it.
