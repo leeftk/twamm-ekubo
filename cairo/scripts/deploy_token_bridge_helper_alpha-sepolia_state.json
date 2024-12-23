@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "transactions": {
+    "transactions": {
+      "a66f645f08649394240e04a40e432121b6fab0854c9bb66c81328e1c71610692": {
+        "name": "declare",
+        "output": {
+          "type": "ErrorResponse",
+          "message": "Contract failed the validation = Max fee (999999999999999) exceeds balance (590761873674473)."
+        },
+        "status": "Error",
+        "timestamp": 1734980320,
+        "misc": null
+      }
+    }
+  }
+}

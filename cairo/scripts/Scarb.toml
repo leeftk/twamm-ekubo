@@ -1,0 +1,21 @@
+[package]
+name = "my_script"
+version = "0.1.0"
+
+[dependencies]
+starknet = ">=2.8.0"
+sncast_std = "0.32.0"
+twammbridge = { path = "../" }
+
+[lib]
+sierra = true
+casm = true
+
+[[target.starknet-contract]]
+sierra = true
+casm = true
+build-external-contracts = [
+    "twammbridge::l2_twamm_bridge::L2TWAMMBridge",
+    "twammbridge::token_bridge_helper::TokenBridgeHelper",
+]
+
