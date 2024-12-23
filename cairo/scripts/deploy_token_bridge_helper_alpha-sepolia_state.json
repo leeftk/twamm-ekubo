@@ -21,6 +21,17 @@
         "status": "Fail",
         "timestamp": 1734982179,
         "misc": null
+      },
+      "e379673132ba648cccfc85f839ab723d10d7e2e4882b61ad7f335f5919449827": {
+        "name": "deploy",
+        "output": {
+          "type": "DeployResponse",
+          "contract_address": "0x66cd77a6454136720ca8a3c309b2e5c3282451cb0936af9a1dc61d0cb4d52fe",
+          "transaction_hash": "0x725b4ad19d8d96ec965dd58bb18125b0a0382e8d04b7a853d7572acaea1a3b5"
+        },
+        "status": "Success",
+        "timestamp": 1734985229,
+        "misc": null
       }
     }
   }

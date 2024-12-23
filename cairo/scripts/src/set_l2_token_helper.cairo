@@ -3,7 +3,7 @@ use sncast_std::{invoke, InvokeResult, get_nonce, FeeSettings, EthFeeSettings};
 
 // Replace this with your deployed contract address
 const CONTRACT_ADDRESS: felt252 = 
-    0x07e867f1fa6da2108dd2b3d534f1fbec411c5ec9504eb3baa1e49c7a0bef5ab5;
+0x01542690fe52674d19297722ff58fe56532369b294080eb08461376dbac80c85;
 
 fn main() {
     let max_fee = 999999999999999;

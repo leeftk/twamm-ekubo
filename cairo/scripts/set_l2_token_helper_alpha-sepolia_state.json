@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "transactions": {
+    "transactions": {
+      "b7d73865963077406a1a276fada27493c3c30a8ba7db4844d94255353d70bf5d": {
+        "name": "invoke",
+        "output": {
+          "type": "InvokeResponse",
+          "transaction_hash": "0x749e99489938d931d11d40dab3d03f3f47847419c11d87741e3b956c3afa964"
+        },
+        "status": "Success",
+        "timestamp": 1734985419,
+        "misc": null
+      }
+    }
+  }
+}
