@@ -9,6 +9,10 @@ starknet = ">=2.3.0"
 [cairo]
 sierra-replace-ids = true
 
+[lib]
+sierra = true
+casm = true
+
 [starknet-artifacts]
 sierra = true
 casm = true
