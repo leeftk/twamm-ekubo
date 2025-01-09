@@ -13,7 +13,7 @@ interface IL1TWAMMBridge {
         uint256 amount,
         uint256 l2EndpointAddress
     ) external payable;
-     function initiateWithdrawal(
+    function initiateWithdrawal(
         address receiver,
         address l1_token,
         uint64 order_id
@@ -38,6 +38,7 @@ interface IStarknetGateBridge {
         uint256 l2Recipient,
         uint256[] calldata message
     ) external payable;
+    function withdraw(address token, uint256 amount, address recipient) external;
 }
 
 contract DepositAndCreateOrder is Script {
@@ -48,7 +49,7 @@ contract DepositAndCreateOrder is Script {
         // IStarknetMessaging snMessaging = IStarknetMessaging(0xE2Bb56ee936fd6433DC0F6e7e3b8365C906AA057);
         address bridgeAddress = 0x21e0b6863F74642fc7764Aa1A394079E388a7b53;
         uint256 l2EndpointAddress = uint256(
-            0xaf6ada98856c64bd418b6a948c36ee31f2676876a4c02abe4a66372b640346
+            0x18a1a551c99cef5b5b4d6bb5b81754683ea084bb89807490c67049ea67e93a0
         );
         uint256 sellTokenAddress = 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d; //stark on l2
         uint256 buyTokenAddress = 0x053b40a647cedfca6ca84f542a0fe36736031905a9639a7f19a3c1e66bfd5080; //usdc on l2
@@ -80,8 +81,15 @@ contract DepositAndCreateOrder is Script {
         // IL1TWAMMBridge(bridgeAddress).initiateCancelDepositRequest{gas: gasPrice}(0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766, amount, 10631);
         // IL1TWAMMBridge(bridgeAddress).depositAndCreateOrder{value: fee}(params);
 
-        IL1TWAMMBridge(bridgeAddress).initiateWithdrawal{value: fee}(msg.sender, 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238, 479);
+        IL1TWAMMBridge(bridgeAddress).initiateWithdrawal{value: fee}(
+            msg.sender,
+            0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238,
+            482
+        );
         // IL1TWAMMBridge(bridgeAddress).setL2EndpointAddress(l2EndpointAddress);
+        // uint256 usdcAmount = 0.000000000001 * 10 **18;
+        // IStarknetGateBridge(0x86dC0B32a5045FFa48D9a60B7e7Ca32F11faCd7B).withdraw(usdcBuyToken, usdcAmount, address(0xDdb342ecc94236c29a5307d3757d0724D759453C));
+
         vm.stopBroadcast();
     }
 }

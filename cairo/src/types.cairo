@@ -1,4 +1,4 @@
-use starknet::ContractAddress;
+use starknet::{ContractAddress, EthAddress};
 
 #[derive(Drop, Serde, Copy)]
 pub struct OrderDetails {
@@ -33,5 +33,5 @@ pub struct OrderKey_Copy {
 #[derive(Drop, Serde, starknet::Store)]
 struct Order_Created {
     order_key: OrderKey_Copy,
-    id: u64,
+    creator: EthAddress,
 }

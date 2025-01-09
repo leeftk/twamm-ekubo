@@ -25,7 +25,8 @@ trait IOrderManager<TContractState> {
 
 #[starknet::component]
 mod OrderManagerComponent {
-    use super::{OrderKey, OrderKey_Copy, OrderDetails, WithdrawalDetails, Order_Created, EthAddress, ContractAddress};
+    use super::IOrderManager;
+use super::{OrderKey, OrderKey_Copy, OrderDetails, WithdrawalDetails, Order_Created, EthAddress, ContractAddress};
     use super::{Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess, StoragePath,
         StoragePathEntry, IPositionsDispatcher, IPositionsDispatcherTrait};
     use starknet::{get_block_timestamp, get_caller_address, contract_address_const, get_contract_address};
@@ -38,7 +39,8 @@ mod OrderManagerComponent {
     // Storage
     #[storage]
     struct Storage {
-        order_id_to_depositor: Map::<u64, EthAddress>,
+        order_id_to_creator: Map::<u64, EthAddress>,
+        order_id_to_order_created: Map::<u64, Order_Created>,
         order_depositor_to_id: Map::<EthAddress, u64>,
         order_depositor_to_id_to_withdrawal_status: Map::<EthAddress, Map<u64, bool>>,
         order_depositor_to_order_created: Map::<EthAddress, Order_Created>,
@@ -137,11 +139,10 @@ mod OrderManagerComponent {
             let sender: EthAddress = message.sender.try_into().unwrap();
             
             // Store order data
-            self.order_id_to_depositor.write(id, sender);
-            self.order_depositor_to_id.write(sender, id);
-            self.order_depositor_to_order_created.write(
-                sender, 
-                Order_Created { order_key: order_key_copy, id }
+            self.order_id_to_creator.write(id, sender);
+            self.order_id_to_order_created.write(
+                id, 
+                Order_Created { order_key: order_key_copy, creator:sender }
             );
 
             // Emit event
@@ -157,23 +158,20 @@ mod OrderManagerComponent {
             let depositor: EthAddress = message.sender.try_into().unwrap();
             let receiver: EthAddress = message.receiver.try_into().unwrap();
             let order_id: u64 = message.order_id.try_into().unwrap();
-            let order_created = self.order_depositor_to_order_created.read(depositor);
 
-            let stored_id = order_created.id;
-            
-            assert(stored_id == order_id, '');
+            let order_creator = self.get_depositor_from_id(order_id);
+
+            // Verify depositor's identity
+            assert(order_creator == depositor, ERROR_UNAUTHORIZED);
+
+            let order_created = self.order_id_to_order_created.read(order_id);
             
             // Decode order key from stored copy
             let order_key = self.decode_order_key_from_stored_copy(order_created.order_key);
           
-            
-            // Verify depositor's identity
-            let user = self.get_depositor_from_id(stored_id);
             // Check if withdrawal has already been processed
-            let withdrawal_status = self.get_withdrawal_status(depositor, stored_id);
+            let withdrawal_status = self.get_withdrawal_status(depositor, order_id);
 
-            // Ensure the current user is the depositor
-            assert(user == depositor, ERROR_UNAUTHORIZED);
             // Ensure the order has not been withdrawn yet
             assert(!withdrawal_status, ERROR_ALREADY_WITHDRAWN);
 
@@ -182,10 +180,10 @@ mod OrderManagerComponent {
             };
             let this_contract_address = get_contract_address();
             
-            let amount_sold = positions.withdraw_proceeds_from_sale_to(stored_id, order_key, this_contract_address);
+            let amount_sold = positions.withdraw_proceeds_from_sale_to(order_id, order_key, this_contract_address);
 
-            // Mark as withdrawn
-            self.order_depositor_to_id_to_withdrawal_status.entry(depositor).entry(stored_id).write(true);
+            // // Mark as withdrawn
+            self.order_depositor_to_id_to_withdrawal_status.entry(depositor).entry(order_id).write(true);
 
             // Handle token bridge withdrawal
             let helper = ITokenBridgeHelperDispatcher { contract_address: token_bridge_helper_address };
@@ -195,8 +193,8 @@ mod OrderManagerComponent {
             // This function will fail if the amount being withdrawn is zero 
             token_bridge.initiate_token_withdraw(message.buy_token.try_into().unwrap(), receiver, amount_sold.into());
 
-            // Emit event
-            self.emit(OrderWithdrawn { id:stored_id, sender: depositor, amount_sold });
+            // // Emit event
+            // self.emit(OrderWithdrawn { id:stored_id, sender: depositor, amount_sold });
         }
 
         // Getter functions
@@ -204,7 +202,7 @@ mod OrderManagerComponent {
              ref self: ComponentState<TContractState>,
             id: u64
         ) -> EthAddress {
-            self.order_id_to_depositor.read(id)
+            self.order_id_to_creator.read(id)
         }
 
         fn get_id_from_depositor(
