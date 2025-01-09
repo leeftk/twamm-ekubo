@@ -13,9 +13,10 @@ interface IL1TWAMMBridge {
         uint256 amount,
         uint256 l2EndpointAddress
     ) external payable;
-    function initiateWithdrawal(
-        uint256 amount,
-        address l1_token
+     function initiateWithdrawal(
+        address receiver,
+        address l1_token,
+        uint64 order_id
     ) external payable;
     function _sendMessage(
         uint256 contractAddress,
@@ -45,9 +46,9 @@ contract DepositAndCreateOrder is Script {
         address strkToken = 0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766; //stark on l1 sepolia
         address usdcBuyToken = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238; //usdc on l1 sepolia
         // IStarknetMessaging snMessaging = IStarknetMessaging(0xE2Bb56ee936fd6433DC0F6e7e3b8365C906AA057);
-        address bridgeAddress = 0xA5fF09d43E9f0572BC072b169d4a975768fe05BB;
+        address bridgeAddress = 0x21e0b6863F74642fc7764Aa1A394079E388a7b53;
         uint256 l2EndpointAddress = uint256(
-            0x1faf6acdf200ef465ed828e948e626c1b063707810b4702e3197b8ac9eb132a
+            0xaf6ada98856c64bd418b6a948c36ee31f2676876a4c02abe4a66372b640346
         );
         uint256 sellTokenAddress = 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d; //stark on l2
         uint256 buyTokenAddress = 0x053b40a647cedfca6ca84f542a0fe36736031905a9639a7f19a3c1e66bfd5080; //usdc on l2
@@ -77,16 +78,9 @@ contract DepositAndCreateOrder is Script {
         });
 
         // IL1TWAMMBridge(bridgeAddress).initiateCancelDepositRequest{gas: gasPrice}(0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766, amount, 10631);
-        IL1TWAMMBridge(bridgeAddress).depositAndCreateOrder{value: fee}(params);
+        // IL1TWAMMBridge(bridgeAddress).depositAndCreateOrder{value: fee}(params);
 
-        // IStarknetGateBridge(bridgeAddress)
-        //     .depositWithMessage{value: fee}(
-        //     strkToken,
-        //     amount,
-        //     l2EndpointAddress,
-        //     withdrawal_message
-        // );
-        // IL1TWAMMBridge(bridgeAddress).initiateWithdrawal{value: fee}(amount, 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238);
+        IL1TWAMMBridge(bridgeAddress).initiateWithdrawal{value: fee}(msg.sender, 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238, 479);
         // IL1TWAMMBridge(bridgeAddress).setL2EndpointAddress(l2EndpointAddress);
         vm.stopBroadcast();
     }

@@ -81,7 +81,7 @@ contract L1TWAMMBridge is Ownable {
         uint256 amount,
         uint256 nonce
     );
-    event WithdrawalInitiated(address indexed l1Recipient, uint256 amount);
+    event WithdrawalInitiated(address indexed l1Recipient, uint64 order_id);
     event Deposit(
         address indexed l1Sender,
         uint256 indexed l2Recipient,
@@ -142,7 +142,11 @@ contract L1TWAMMBridge is Ownable {
         if (msg.value == 0) revert ZeroValue();
         _validateTimeParams(params.start, params.end);
         // address tokenBridge = starknetRegistry.getBridge(address(token));
-        _handleTokenTransfer(params.amount, address(token), address(starknetBridge));
+        _handleTokenTransfer(
+            params.amount,
+            address(token),
+            address(starknetBridge)
+        );
         uint256[] memory payload = _encodeDepositPayload(
             msg.sender,
             params.sellToken,
@@ -168,17 +172,20 @@ contract L1TWAMMBridge is Ownable {
     }
 
     /// @notice Initiates a withdrawal from L2 to L1
-    /// @param amount Amount of tokens to withdraw
+    /// @param receiver Address of the receiver
+    /// @param order_id Amount of tokens to withdraw
     /// @param l1_token Address of the L1 token to receive
     /// @dev Requires msg.value to cover messaging fees
     function initiateWithdrawal(
-        uint256 amount,
-        address l1_token
+        address receiver,
+        address l1_token,
+        uint64 order_id
     ) external payable {
         uint256[] memory message = _encodeWithdrawalPayload(
             msg.sender,
+            receiver,
             l1_token,
-            amount
+            order_id
         );
 
         _sendMessage(
@@ -188,7 +195,7 @@ contract L1TWAMMBridge is Ownable {
             msg.value
         );
 
-        emit WithdrawalInitiated(msg.sender, amount);
+        emit WithdrawalInitiated(msg.sender, order_id);
     }
 
     /// @notice Initiates a request to cancel a deposit
@@ -336,24 +343,20 @@ contract L1TWAMMBridge is Ownable {
     /// @notice Encodes the payload for a withdrawal operation
     /// @param sender Address of the sender
     /// @param l1Token Address of the L1 token
-    /// @param amount Amount of tokens
+
     /// @return Encoded payload array
     function _encodeWithdrawalPayload(
         address sender,
+        address receiver,
         address l1Token,
-        uint256 amount
+        uint64 order_id
     ) internal pure returns (uint256[] memory) {
-        uint256[] memory payload = new uint256[](8);
-
+        uint256[] memory payload = new uint256[](5);
         payload[0] = WITHDRAWAL_OPERATION;
         payload[1] = uint256(uint160(sender));
-        payload[2] = 0; // placeholder
+        payload[2] = uint256(uint160(receiver));
         payload[3] = uint256(uint160(l1Token));
-        payload[4] = 0; // placeholder
-        payload[5] = 0; // placeholder
-        payload[6] = 0; // placeholder
-        payload[7] = amount;
-
+        payload[4] = uint256(order_id);
         return payload;
     }
 

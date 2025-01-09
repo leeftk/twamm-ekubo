@@ -128,11 +128,11 @@ contract L1TWAMMBridgeTest is Test {
         uint64 id = 1;
         uint128 saleRateDelta = 50 ether;
         address l1Recipient = address(0x3);
-        uint128 amount = 100 ether;
+        uint64 order_id = 1;
 
         vm.expectRevert();
         vm.prank(user);
-        bridge.initiateWithdrawal(id, address(token));
+        bridge.initiateWithdrawal(address(user), address(token), order_id);
     }
 
     function testInvalidTimeRange() public {
