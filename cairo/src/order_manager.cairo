@@ -8,7 +8,7 @@ use ekubo::extensions::interfaces::twamm::{OrderKey};
 use ekubo::interfaces::positions::{IPositionsDispatcher, IPositionsDispatcherTrait};
 use super::token_bridge_helper::{ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait};
 use super::interfaces::{ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait};
-use super::types::{OrderDetails, OrderKey_Copy, Order_Created};
+use super::types::{OrderDetails, WithdrawalDetails, OrderKey_Copy, Order_Created};
 use super::errors::{ERROR_UNAUTHORIZED, ERROR_ALREADY_WITHDRAWN, ERROR_ZERO_AMOUNT, ERROR_NO_TOKENS_MINTED};
 
 #[starknet::interface]
@@ -16,7 +16,7 @@ trait IOrderManager<TContractState> {
     fn create_order_key( ref self: TContractState ,message: OrderDetails) -> OrderKey;
     fn decode_order_key_from_stored_copy( ref self: TContractState, stored_key: OrderKey_Copy) -> OrderKey;
     fn execute_deposit( ref self: TContractState, message: OrderDetails);
-    fn execute_withdrawal( ref self: TContractState, message: OrderDetails, token_bridge_helper_address: ContractAddress);
+    fn execute_withdrawal( ref self: TContractState, message: WithdrawalDetails, token_bridge_helper_address: ContractAddress);
     fn get_depositor_from_id( ref self: TContractState ,id: u64) -> EthAddress;
     fn get_id_from_depositor( ref self: TContractState, depositor: EthAddress) -> u64;
     fn get_withdrawal_status( ref self: TContractState, depositor: EthAddress, id: u64) -> bool;
@@ -25,7 +25,7 @@ trait IOrderManager<TContractState> {
 
 #[starknet::component]
 mod OrderManagerComponent {
-    use super::{OrderKey, OrderKey_Copy, OrderDetails, Order_Created, EthAddress, ContractAddress};
+    use super::{OrderKey, OrderKey_Copy, OrderDetails, WithdrawalDetails, Order_Created, EthAddress, ContractAddress};
     use super::{Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess, StoragePath,
         StoragePathEntry, IPositionsDispatcher, IPositionsDispatcherTrait};
     use starknet::{get_block_timestamp, get_caller_address, contract_address_const, get_contract_address};
@@ -133,9 +133,6 @@ mod OrderManagerComponent {
             };
 
             let (id, minted) = positions.mint_and_increase_sell_amount(order_key, amount_u128);
-            
-            assert(minted != 0, ERROR_NO_TOKENS_MINTED);
-            assert(id != 0, ERROR_ZERO_AMOUNT);
 
             let sender: EthAddress = message.sender.try_into().unwrap();
             
@@ -153,21 +150,27 @@ mod OrderManagerComponent {
 
         // Execute withdrawal
         fn execute_withdrawal(
-             ref self: ComponentState<TContractState>,
-            message: OrderDetails,
+            ref self: ComponentState<TContractState>,
+            message: WithdrawalDetails,
             token_bridge_helper_address: ContractAddress
         ) {
             let depositor: EthAddress = message.sender.try_into().unwrap();
+            let receiver: EthAddress = message.receiver.try_into().unwrap();
+            let order_id: u64 = message.order_id.try_into().unwrap();
             let order_created = self.order_depositor_to_order_created.read(depositor);
+
+            let stored_id = order_created.id;
+            
+            assert(stored_id == order_id, '');
             
             // Decode order key from stored copy
             let order_key = self.decode_order_key_from_stored_copy(order_created.order_key);
-            let id = order_created.id;
+          
             
             // Verify depositor's identity
-            let user = self.get_depositor_from_id(id);
+            let user = self.get_depositor_from_id(stored_id);
             // Check if withdrawal has already been processed
-            let withdrawal_status = self.get_withdrawal_status(depositor, id);
+            let withdrawal_status = self.get_withdrawal_status(depositor, stored_id);
 
             // Ensure the current user is the depositor
             assert(user == depositor, ERROR_UNAUTHORIZED);
@@ -179,10 +182,10 @@ mod OrderManagerComponent {
             };
             let this_contract_address = get_contract_address();
             
-            let amount_sold = positions.withdraw_proceeds_from_sale_to(id, order_key, this_contract_address);
+            let amount_sold = positions.withdraw_proceeds_from_sale_to(stored_id, order_key, this_contract_address);
 
             // Mark as withdrawn
-            self.order_depositor_to_id_to_withdrawal_status.entry(depositor).entry(id).write(true);
+            self.order_depositor_to_id_to_withdrawal_status.entry(depositor).entry(stored_id).write(true);
 
             // Handle token bridge withdrawal
             let helper = ITokenBridgeHelperDispatcher { contract_address: token_bridge_helper_address };
@@ -190,10 +193,10 @@ mod OrderManagerComponent {
             let token_bridge = ITokenBridgeDispatcher { contract_address: l2_bridge };
 
             // This function will fail if the amount being withdrawn is zero 
-            token_bridge.initiate_token_withdraw(message.buy_token.try_into().unwrap(), depositor, amount_sold.into());
+            token_bridge.initiate_token_withdraw(message.buy_token.try_into().unwrap(), receiver, amount_sold.into());
 
             // Emit event
-            self.emit(OrderWithdrawn { id, sender: depositor, amount_sold });
+            self.emit(OrderWithdrawn { id:stored_id, sender: depositor, amount_sold });
         }
 
         // Getter functions

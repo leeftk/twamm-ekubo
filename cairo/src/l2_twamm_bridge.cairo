@@ -12,7 +12,7 @@ use starknet::EthAddress;
 use super::token_bridge_helper::{
     ITokenBridgeHelper, ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait,
 };
-use super::types::{OrderDetails, OrderKey_Copy};
+use super::types::{OrderDetails, OrderKey_Copy, WithdrawalDetails};
 use super::interfaces::{
     ITokenBridge, ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait, IERC20, IERC20Dispatcher,
     IERC20DispatcherTrait,
@@ -33,7 +33,7 @@ pub trait IL2TWAMMBridge<TContractState> {
         amount: u256,
         depositor: EthAddress,
         message: Span<felt252>,
-    ) -> bool; 
+    ) -> bool;
 }
 
 #[starknet::contract]
@@ -53,6 +53,7 @@ mod L2TWAMMBridge {
     use super::{get_caller_address};
     use core::array::ArrayTrait;
     use super::OrderDetails;
+    use super::WithdrawalDetails;
     use super::{IERC20, IERC20Dispatcher, IERC20DispatcherTrait};
     use super::OrderKey_Copy;
     use super::{ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait};
@@ -67,6 +68,7 @@ mod L2TWAMMBridge {
     pub struct Storage {
         contract_owner_address: ContractAddress,
         token_bridge_helper: ContractAddress,
+        l1_twamm_address: EthAddress,
         #[substorage(v0)]
         order_manager: OrderManagerComponent::Storage,
     }
@@ -96,20 +98,17 @@ mod L2TWAMMBridge {
 
     //l1_handler
     #[l1_handler]
-    fn msg_handler_struct(ref self: ContractState, from_address: felt252, data: OrderDetails) {
-      if data.order_operation == 2 {
-            self.emit(MessageReceived { message: data });
-           self.handle_withdrawal(data);
+    fn msg_handler_struct(ref self: ContractState, from_address: felt252, data: WithdrawalDetails) {
+        if data.order_operation == 2 {
+            self.handle_withdrawal(data);
         }
     }
-
 
 
     // External Functions
     #[external(v0)]
     #[abi(embed_v0)]
     impl L2TWAMMBridge of super::IL2TWAMMBridge<ContractState> {
-
         fn on_receive(
             ref self: ContractState,
             l2_token: ContractAddress,
@@ -117,10 +116,9 @@ mod L2TWAMMBridge {
             depositor: EthAddress,
             message: Span<felt252>,
         ) -> bool {
-            let message_struct = self.to_order_details(message);
-            self.emit(MessageReceived { message: message_struct });
-            if message_struct.order_operation == 0 {
             // Create order or execute deposit with these parameters
+            let message_struct = self.to_order_details(message);
+            if message_struct.order_operation == 0 {
                 self.handle_deposit(message_struct)
             } else {
                 return false;
@@ -133,6 +131,7 @@ mod L2TWAMMBridge {
             self.assert_only_owner();
             self.token_bridge_helper.write(address);
         }
+
 
         // View functions
 
@@ -171,7 +170,7 @@ mod L2TWAMMBridge {
             self.order_manager.execute_deposit(message);
         }
         // Processes withdrawal message from L1
-        fn handle_withdrawal(ref self: ContractState, message: OrderDetails) {
+        fn handle_withdrawal(ref self: ContractState, message: WithdrawalDetails) {
             self.order_manager.execute_withdrawal(message, self.token_bridge_helper.read());
         }
         // Only Owner modifier
@@ -182,5 +181,5 @@ mod L2TWAMMBridge {
         }
     }
 }
-//0x26aece05eedcf29505f498ee637e2595c65944423abe26175677e484a72c3af
+
 
