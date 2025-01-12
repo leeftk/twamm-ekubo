@@ -18,15 +18,16 @@ use super::interfaces::{
     IERC20DispatcherTrait,
 };
 use super::order_manager::OrderManagerComponent;
-use super::errors::{ERROR_UNAUTHORIZED};
+use super::errors::{ERROR_UNAUTHORIZED, ERROR_INVALID_L1_ADDRESS};
 
 
 #[starknet::interface]
 pub trait IL2TWAMMBridge<TContractState> {
     fn set_token_bridge_helper(ref self: TContractState, address: ContractAddress);
+    fn set_l1_contract_address(ref self: TContractState, address: EthAddress);
     fn get_contract_owner(self: @TContractState) -> ContractAddress;
     fn get_token_bridge_helper(self: @TContractState) -> ContractAddress;
-    fn to_order_details(ref self: TContractState, span: Span<felt252>) -> OrderDetails;
+    fn get_l1_contract_address(self: @TContractState) -> EthAddress;
     fn on_receive(
         ref self: TContractState,
         l2_token: ContractAddress,
@@ -58,7 +59,7 @@ mod L2TWAMMBridge {
     use super::OrderKey_Copy;
     use super::{ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait};
     use super::OrderManagerComponent;
-    use super::ERROR_UNAUTHORIZED;
+    use super::{ERROR_UNAUTHORIZED, ERROR_INVALID_L1_ADDRESS};
 
     // Manages order-related operations
     component!(path: OrderManagerComponent, storage: order_manager, event: OrderManagerEvent);
@@ -68,7 +69,7 @@ mod L2TWAMMBridge {
     pub struct Storage {
         contract_owner_address: ContractAddress,
         token_bridge_helper: ContractAddress,
-        l1_twamm_address: EthAddress,
+        l1_contract_address: EthAddress,
         #[substorage(v0)]
         order_manager: OrderManagerComponent::Storage,
     }
@@ -117,13 +118,14 @@ mod L2TWAMMBridge {
             message: Span<felt252>,
         ) -> bool {
             // Create order or execute deposit with these parameters
-            let message_struct = self.to_order_details(message);
+            let message_struct = self.order_manager.span_to_order_details(message);
             if message_struct.order_operation == 0 {
-                self.handle_deposit(message_struct)
-            } else {
+                self.handle_deposit(message_struct);
                 return false;
+            } else {
+                return true;
             }
-            return true;
+            // return true;
         }
 
         // Admin functionsto set token bridge helper address
@@ -132,34 +134,24 @@ mod L2TWAMMBridge {
             self.token_bridge_helper.write(address);
         }
 
-
+        fn set_l1_contract_address(ref self: ContractState, address: EthAddress) {
+            self.assert_only_owner();
+            self.l1_contract_address.write(address);
+        }
         // View functions
-
         fn get_contract_owner(self: @ContractState) -> ContractAddress {
             return self.contract_owner_address.read();
+        }
+
+        fn get_l1_contract_address(self: @ContractState) -> EthAddress {
+            return self.l1_contract_address.read();
         }
 
         fn get_token_bridge_helper(self: @ContractState) -> ContractAddress {
             return self.token_bridge_helper.read();
         }
 
-        fn to_order_details(ref self: ContractState, span: Span<felt252>) -> OrderDetails {
-            assert(span.len() == 8, 'Invalid span length');
-
-            let mut data = span.snapshot;
-            let order_operation = *data[0];
-            let sender = *data[1];
-            let sell_token = *data[2];
-            let buy_token = *data[3];
-            let fee = *data[4];
-            let start = *data[5];
-            let end = *data[6];
-            let amount = *data[7];
-
-            return OrderDetails {
-                order_operation, sender, sell_token, buy_token, fee, start, end, amount,
-            };
-        }
+       
     }
 
     // Internal helper functions
@@ -167,10 +159,20 @@ mod L2TWAMMBridge {
     impl PrivateFunctions of PrivateFunctionsTrait {
         // Processes deposit message from L1
         fn handle_deposit(ref self: ContractState, message: OrderDetails) {
+            let l1_contract_address = self.l1_contract_address.read();
+            assert(
+                message.l1_contract.try_into().unwrap() == l1_contract_address,
+                ERROR_INVALID_L1_ADDRESS,
+            );
             self.order_manager.execute_deposit(message);
         }
         // Processes withdrawal message from L1
         fn handle_withdrawal(ref self: ContractState, message: WithdrawalDetails) {
+            let l1_contract_address = self.l1_contract_address.read();
+            assert(
+                message.l1_contract.try_into().unwrap() == l1_contract_address,
+                ERROR_INVALID_L1_ADDRESS,
+            );
             self.order_manager.execute_withdrawal(message, self.token_bridge_helper.read());
         }
         // Only Owner modifier
@@ -181,5 +183,4 @@ mod L2TWAMMBridge {
         }
     }
 }
-
 

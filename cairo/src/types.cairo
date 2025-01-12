@@ -9,7 +9,8 @@ pub struct OrderDetails {
     pub fee: felt252,
     pub start: felt252,
     pub end: felt252,
-    pub amount: felt252
+    pub amount: felt252,
+    pub l1_contract: felt252
 }
 
 #[derive(Drop, Serde, Copy)]
@@ -19,6 +20,7 @@ pub struct WithdrawalDetails {
     pub receiver: felt252,
     pub buy_token: felt252,
     pub order_id: felt252,
+    pub l1_contract: felt252
 }
 
 #[derive(Drop, Serde, Copy, starknet::Store)]

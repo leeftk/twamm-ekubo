@@ -26,7 +26,12 @@ interface IL1TWAMMBridge {
     function setL2EndpointAddress(uint256 _l2EndpointAddress) external;
     function initiateCancelDepositRequest(
         address l1_token,
-        uint256 amount,
+        OrderParams memory params,
+        uint256 nonce
+    ) external;
+    function initiateCancelDepositReclaim(
+        address l1_token,
+        OrderParams memory params,
         uint256 nonce
     ) external;
 }
@@ -38,7 +43,11 @@ interface IStarknetGateBridge {
         uint256 l2Recipient,
         uint256[] calldata message
     ) external payable;
-    function withdraw(address token, uint256 amount, address recipient) external;
+    function withdraw(
+        address token,
+        uint256 amount,
+        address recipient
+    ) external;
 }
 
 contract DepositAndCreateOrder is Script {
@@ -47,9 +56,12 @@ contract DepositAndCreateOrder is Script {
         address strkToken = 0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766; //stark on l1 sepolia
         address usdcBuyToken = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238; //usdc on l1 sepolia
         // IStarknetMessaging snMessaging = IStarknetMessaging(0xE2Bb56ee936fd6433DC0F6e7e3b8365C906AA057);
-        address bridgeAddress = 0x21e0b6863F74642fc7764Aa1A394079E388a7b53;
+        address bridgeAddress = 0x8c3F4901dfAf00f43B11554d96Db04FAe340479E;
         uint256 l2EndpointAddress = uint256(
-            0x18a1a551c99cef5b5b4d6bb5b81754683ea084bb89807490c67049ea67e93a0
+            0x2303a0e4fd858af5f1f053586f4af81fbea049ad91e2d24d97f735e020059a
+        );
+        uint256 l2FailEndpoint = uint256(
+            0xb3fa26e2af15dda3690ff437257057ad524115b00182928b60d213d50281a6
         );
         uint256 sellTokenAddress = 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d; //stark on l2
         uint256 buyTokenAddress = 0x053b40a647cedfca6ca84f542a0fe36736031905a9639a7f19a3c1e66bfd5080; //usdc on l2
@@ -66,29 +78,34 @@ contract DepositAndCreateOrder is Script {
         vm.startBroadcast();
 
         // Approve token spending
-        IERC20(strkToken).approve(bridgeAddress, type(uint256).max);
+        // IERC20(strkToken).approve(bridgeAddress, type(uint256).max);
 
         OrderParams memory params = OrderParams({
             sender: msg.sender,
             sellToken: sellTokenAddress,
             buyToken: buyTokenAddress,
             fee: 170141183460469235273462165868118016,
-            start: start,
-            end: end,
-            amount: amount
+            start: 1736650848,
+            end: 1736650976,
+            amount: amount,
+            l1_contract: bridgeAddress
         });
 
-        // IL1TWAMMBridge(bridgeAddress).initiateCancelDepositRequest{gas: gasPrice}(0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766, amount, 10631);
+        // IL1TWAMMBridge(bridgeAddress).initiateCancelDepositRequest(
+        //     0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766,
+        //     params,
+        //     11141
+        // );
         // IL1TWAMMBridge(bridgeAddress).depositAndCreateOrder{value: fee}(params);
 
-        IL1TWAMMBridge(bridgeAddress).initiateWithdrawal{value: fee}(
-            msg.sender,
-            0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238,
-            482
-        );
-        // IL1TWAMMBridge(bridgeAddress).setL2EndpointAddress(l2EndpointAddress);
-        // uint256 usdcAmount = 0.000000000001 * 10 **18;
-        // IStarknetGateBridge(0x86dC0B32a5045FFa48D9a60B7e7Ca32F11faCd7B).withdraw(usdcBuyToken, usdcAmount, address(0xDdb342ecc94236c29a5307d3757d0724D759453C));
+        // IL1TWAMMBridge(bridgeAddress).initiateWithdrawal{value: fee}(
+        //     msg.sender,
+        //     0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238,
+        //     482
+        // );
+        IL1TWAMMBridge(bridgeAddress).setL2EndpointAddress(l2EndpointAddress);
+        // uint256 usdcAmount = 0.0;
+        // IStarknetGateBridge(0x86dC0B32a5045FFa48D9a60B7e7Ca32F11faCd7B).withdraw(usdcBuyToken, 1, msg.sender);
 
         vm.stopBroadcast();
     }

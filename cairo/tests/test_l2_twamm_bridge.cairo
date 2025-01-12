@@ -37,6 +37,7 @@ mod tests {
             fee: 3,
             start: 1000,
             end: 2000,
+            l1_contract: 123.try_into().unwrap()
         }
     }
 
