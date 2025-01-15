@@ -41,6 +41,12 @@ interface IStarknetTokenBridge {
         uint256[] calldata message,
         uint256 nonce
     ) external;
+
+     function withdraw(
+        address token,
+        uint256 amount,
+        address recipient
+    ) external;
 }
 
 interface IStarknetRegistry {
@@ -198,6 +204,15 @@ contract L1TWAMMBridge is Ownable {
         );
 
         emit WithdrawalInitiated(msg.sender, order_id);
+    }
+
+    function claimWithdrawal(
+        address _token,
+        uint256 _amount,
+        address _recipient
+    ) external{
+        address tokenBridge = starknetRegistry.getBridge(_token);
+        IStarknetTokenBridge(tokenBridge).withdraw(_token, _amount, _recipient);
     }
 
     /// @notice Initiates a request to cancel a deposit

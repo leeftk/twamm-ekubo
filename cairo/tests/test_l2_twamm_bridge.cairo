@@ -10,7 +10,7 @@ mod tests {
     use twammbridge::l2_twamm_bridge::{
         L2TWAMMBridge, IL2TWAMMBridge, IL2TWAMMBridgeDispatcher, IL2TWAMMBridgeDispatcherTrait
     };
-    use twammbridge::types::OrderDetails;
+    use twammbridge::types::{OrderDetails};
     use twammbridge::errors::{ERROR_UNAUTHORIZED};
     use twammbridge::token_bridge_helper::{
         ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait
