@@ -7,3 +7,4 @@ const ERROR_NOT_ORDER_OWNER: felt252 = 'Not order owner';
 const ERROR_INVALID_ADDRESS: felt252 = 'Invalid address';
 const ALREADY_WITHDRAWN: felt252 = 'Order has been withdrawn';
 const ERROR_INVALID_TOKEN: felt252 = 'Invalid token address';
+const ERROR_INVALID_L1_ADDRESS: felt252 = 'Invalid L1 address';

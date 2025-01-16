@@ -10,7 +10,7 @@ mod tests {
     use twammbridge::l2_twamm_bridge::{
         L2TWAMMBridge, IL2TWAMMBridge, IL2TWAMMBridgeDispatcher, IL2TWAMMBridgeDispatcherTrait
     };
-    use twammbridge::types::OrderDetails;
+    use twammbridge::types::{OrderDetails};
     use twammbridge::errors::{ERROR_UNAUTHORIZED};
     use twammbridge::token_bridge_helper::{
         ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait
@@ -37,6 +37,7 @@ mod tests {
             fee: 3,
             start: 1000,
             end: 2000,
+            l1_contract: 123.try_into().unwrap()
         }
     }
 

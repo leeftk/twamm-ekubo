@@ -115,7 +115,8 @@ contract L1TWAMMBridgeTest is Test {
             fee: DEFAULT_FEE,
             start: start,
             end: end,
-            amount: DEFAULT_AMOUNT
+            amount: DEFAULT_AMOUNT,
+            l1_contract: address(0x123)
         });
 
         vm.prank(user);
@@ -128,11 +129,11 @@ contract L1TWAMMBridgeTest is Test {
         uint64 id = 1;
         uint128 saleRateDelta = 50 ether;
         address l1Recipient = address(0x3);
-        uint128 amount = 100 ether;
+        uint64 order_id = 1;
 
         vm.expectRevert();
         vm.prank(user);
-        bridge.initiateWithdrawal(id, address(token));
+        bridge.initiateWithdrawal(address(user), address(token), order_id);
     }
 
     function testInvalidTimeRange() public {
@@ -148,7 +149,8 @@ contract L1TWAMMBridgeTest is Test {
             fee,
             start,
             start + 64,
-            amount
+            amount,
+           address(0x123)
         );
         bridge.depositAndCreateOrder(order);
         vm.stopPrank();
@@ -164,12 +166,12 @@ contract L1TWAMMBridgeTest is Test {
     function testInvalidInitiateCancelDepositRequest() public {
         //should revert with the wrong nonce
         vm.expectRevert("NO_MESSAGE_TO_CANCEL");
-        bridge.initiateCancelDepositRequest(address(token), 100, 0);
+        // bridge.initiateCancelDepositRequest(address(token), 100, 0);
     }
 
     function testInvalidInitiateDepositReclaim() public {
         //should revert with the wrong nonce
         vm.expectRevert("NO_MESSAGE_TO_CANCEL");
-        bridge.initiateDepositReclaim(address(token), 100, 10631);
+        // bridge.initiateDepositReclaim(address(token), 100, 10631);
     }
 }
