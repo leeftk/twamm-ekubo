@@ -28,10 +28,6 @@ trait IOrderManager<TContractState> {
         message: WithdrawalDetails,
         token_bridge_helper_address: ContractAddress,
     );
-    fn get_depositor_from_id(ref self: TContractState, id: u64) -> EthAddress;
-    fn get_id_from_depositor(ref self: TContractState, depositor: EthAddress) -> u64;
-    fn get_withdrawal_status(ref self: TContractState, depositor: EthAddress, id: u64) -> bool;
-    fn get_order_created(ref self: TContractState, depositor: EthAddress) -> Order_Created;
     fn span_to_order_details(ref self: TContractState, span: Span<felt252>) -> OrderDetails;
 }
 
@@ -61,11 +57,7 @@ mod OrderManagerComponent {
     // Storage
     #[storage]
     struct Storage {
-        order_id_to_creator: Map::<u64, EthAddress>,
         order_id_to_order_created: Map::<u64, Order_Created>,
-        order_depositor_to_id: Map::<EthAddress, u64>,
-        order_depositor_to_id_to_withdrawal_status: Map::<EthAddress, Map<u64, bool>>,
-        order_depositor_to_order_created: Map::<EthAddress, Order_Created>,
         contract_owner: ContractAddress,
     }
 
@@ -158,12 +150,13 @@ mod OrderManagerComponent {
             let sender: EthAddress = message.sender.try_into().unwrap();
 
             // Store order data
-            self.order_id_to_creator.write(id, sender);
             self
                 .order_id_to_order_created
-                .write(id, Order_Created { order_key: order_key_copy, creator: sender });
-
-            // Emit event
+                .write(
+                    id,
+                    Order_Created { order_key: order_key_copy, creator: sender, withdrawn: false },
+                );
+                
             self.emit(OrderCreated { id, sender, amount: amount_u128 });
         }
 
@@ -177,21 +170,19 @@ mod OrderManagerComponent {
             let receiver: EthAddress = message.receiver.try_into().unwrap();
             let order_id: u64 = message.order_id.try_into().unwrap();
 
-            let order_creator = self.get_depositor_from_id(order_id);
+            let order_created = self.order_id_to_order_created.read(order_id);
 
             // Verify depositor's identity
-            assert(order_creator == depositor, ERROR_UNAUTHORIZED);
-
-            let order_created = self.order_id_to_order_created.read(order_id);
+            assert(order_created.creator == depositor, ERROR_UNAUTHORIZED);
 
             // Decode order key from stored copy
             let order_key = self.decode_order_key_from_stored_copy(order_created.order_key);
 
             // Check if withdrawal has already been processed
-            let withdrawal_status = self.get_withdrawal_status(depositor, order_id);
+            let withdrawal_status = order_created.withdrawn;
 
             // Ensure the order has not been withdrawn yet
-            assert(!withdrawal_status, ERROR_ALREADY_WITHDRAWN);
+            assert(withdrawal_status == false, ERROR_ALREADY_WITHDRAWN);
 
             let positions = IPositionsDispatcher {
                 contract_address: contract_address_const::<
@@ -203,12 +194,17 @@ mod OrderManagerComponent {
             let amount_sold = positions
                 .withdraw_proceeds_from_sale_to(order_id, order_key, this_contract_address);
 
-            // // Mark as withdrawn
+            // Mark as withdrawn
             self
-                .order_depositor_to_id_to_withdrawal_status
-                .entry(depositor)
-                .entry(order_id)
-                .write(true);
+                .order_id_to_order_created
+                .write(
+                    order_id,
+                    Order_Created {
+                        order_key: order_created.order_key,
+                        creator: order_created.creator,
+                        withdrawn: true,
+                    },
+                );
 
             // Handle token bridge withdrawal
             let helper = ITokenBridgeHelperDispatcher {
@@ -223,33 +219,9 @@ mod OrderManagerComponent {
                 .initiate_token_withdraw(
                     message.buy_token.try_into().unwrap(), receiver, amount_sold.into(),
                 );
-            // // Emit event
-        // self.emit(OrderWithdrawn { id:stored_id, sender: depositor, amount_sold });
         }
 
-        // Getter functions
-        fn get_depositor_from_id(ref self: ComponentState<TContractState>, id: u64) -> EthAddress {
-            self.order_id_to_creator.read(id)
-        }
-
-        fn get_id_from_depositor(
-            ref self: ComponentState<TContractState>, depositor: EthAddress,
-        ) -> u64 {
-            self.order_depositor_to_id.read(depositor)
-        }
-
-        fn get_withdrawal_status(
-            ref self: ComponentState<TContractState>, depositor: EthAddress, id: u64,
-        ) -> bool {
-            self.order_depositor_to_id_to_withdrawal_status.entry(depositor).entry(id).read()
-        }
-
-        fn get_order_created(
-            ref self: ComponentState<TContractState>, depositor: EthAddress,
-        ) -> Order_Created {
-            self.order_depositor_to_order_created.read(depositor)
-        }
-
+        // Helper function
         fn span_to_order_details(
             ref self: ComponentState<TContractState>, span: Span<felt252>,
         ) -> OrderDetails {

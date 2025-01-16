@@ -17,21 +17,13 @@ contract L1TWAMMBridgeTest is Test {
 
     address public user = address(0x1);
     address public l2EkuboAddress = address(0x2);
-    uint256 public l2EndpointAddress =
-        uint256(
-            0x4fe8b6644cdf2a469abc0dcf097cdd3608e2f89c1c189962f0a6d8a1d7e0a11
-        );
+    uint256 public l2EndpointAddress = uint256(0x4fe8b6644cdf2a469abc0dcf097cdd3608e2f89c1c189962f0a6d8a1d7e0a11);
     uint128 public currentTimestamp = uint128(block.timestamp);
     uint128 public difference = 16 - (currentTimestamp % 16);
     uint128 public start = currentTimestamp + difference;
     uint128 public end = start + DEFAULT_DURATION;
 
-    event DepositAndCreateOrder(
-        address indexed l1Sender,
-        uint256 indexed l2Recipient,
-        uint256 amount,
-        uint256 nonce
-    );
+    event DepositAndCreateOrder(address indexed l1Sender, uint256 indexed l2Recipient, uint256 amount, uint256 nonce);
     event WithdrawalInitiated(address indexed l1Recipient, uint256 amount);
 
     function setUp() public {
@@ -42,7 +34,6 @@ contract L1TWAMMBridgeTest is Test {
         bridge = new L1TWAMMBridge(
             address(token),
             address(starknetBridge),
-            l2EkuboAddress,
             l2EndpointAddress,
             address(0x1268cc171c54F2000402DfF20E93E60DF4c96812)
         );
@@ -78,8 +69,7 @@ contract L1TWAMMBridgeTest is Test {
         // Assert token transfer
 
         // Assert state of the Starknet bridge
-        MockStarknetTokenBridge.DepositParams
-            memory depositParams = starknetBridge.getLastDepositParams();
+        MockStarknetTokenBridge.DepositParams memory depositParams = starknetBridge.getLastDepositParams();
         assertEq(starknetBridge.orderCreated(user), 1, "Order not created");
     }
 
@@ -134,7 +124,7 @@ contract L1TWAMMBridgeTest is Test {
             start: start,
             end: start + DEFAULT_DURATION,
             amount: DEFAULT_AMOUNT,
-          l1_contract: address(0x123)
+            l1_contract: address(0x123)
         });
 
         vm.expectRevert();

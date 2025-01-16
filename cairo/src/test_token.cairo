@@ -6,7 +6,7 @@ pub(crate) trait IERC20<TContractState> {
     fn allowance(self: @TContractState, owner: ContractAddress, spender: ContractAddress) -> u256;
     fn transfer(ref self: TContractState, recipient: ContractAddress, amount: u256) -> bool;
     fn transferFrom(
-        ref self: TContractState, sender: ContractAddress, recipient: ContractAddress, amount: u256
+        ref self: TContractState, sender: ContractAddress, recipient: ContractAddress, amount: u256,
     ) -> bool;
     fn approve(ref self: TContractState, spender: ContractAddress, amount: u256) -> bool;
     fn mint(ref self: TContractState, account: ContractAddress, amount: u256) -> bool;
@@ -46,7 +46,7 @@ pub(crate) mod TestToken {
         }
 
         fn allowance(
-            self: @ContractState, owner: ContractAddress, spender: ContractAddress
+            self: @ContractState, owner: ContractAddress, spender: ContractAddress,
         ) -> u256 {
             self.allowances.read((owner, spender)).into()
         }
@@ -63,7 +63,7 @@ pub(crate) mod TestToken {
             ref self: ContractState,
             sender: ContractAddress,
             recipient: ContractAddress,
-            amount: u256
+            amount: u256,
         ) -> bool {
             let allowance = self.allowances.read((sender, get_caller_address()));
             assert(allowance >= amount, 'INSUFFICIENT_ALLOWANCE');

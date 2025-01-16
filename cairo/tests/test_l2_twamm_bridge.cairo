@@ -4,19 +4,19 @@ mod tests {
     use snforge_std::{
         declare, start_cheat_caller_address, stop_cheat_caller_address, ContractClassTrait,
         DeclareResultTrait, spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait, Event,
-        L1Handler, L1HandlerTrait
+        L1Handler, L1HandlerTrait,
     };
     use twammbridge::l2_twamm_bridge;
     use twammbridge::l2_twamm_bridge::{
-        L2TWAMMBridge, IL2TWAMMBridge, IL2TWAMMBridgeDispatcher, IL2TWAMMBridgeDispatcherTrait
+        L2TWAMMBridge, IL2TWAMMBridge, IL2TWAMMBridgeDispatcher, IL2TWAMMBridgeDispatcherTrait,
     };
     use twammbridge::types::{OrderDetails};
     use twammbridge::errors::{ERROR_UNAUTHORIZED};
     use twammbridge::token_bridge_helper::{
-        ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait
+        ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait,
     };
     use twammbridge::mocks::mock_twamm_bridge::{
-        MockTWAMMBridge, IMockTWAMMBridgeDispatcher, IMockTWAMMBridgeDispatcherTrait
+        MockTWAMMBridge, IMockTWAMMBridgeDispatcher, IMockTWAMMBridgeDispatcherTrait,
     };
 
     fn deploy_mock_l2twamm_bridge() -> (IMockTWAMMBridgeDispatcher, ContractAddress) {
@@ -37,7 +37,7 @@ mod tests {
             fee: 3,
             start: 1000,
             end: 2000,
-            l1_contract: 123.try_into().unwrap()
+            l1_contract: 123.try_into().unwrap(),
         }
     }
 
@@ -62,7 +62,7 @@ mod tests {
             message.amount.into(),
             message.fee.into(),
             message.start.into(),
-            message.end.into()
+            message.end.into(),
         ];
 
         let message_span = serialized_order.span();
@@ -103,7 +103,7 @@ mod tests {
             message.amount.into(),
             message.fee.into(),
             message.start.into(),
-            message.end.into()
+            message.end.into(),
         ];
 
         start_cheat_caller_address(contract_address, caller);

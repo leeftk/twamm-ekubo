@@ -23,7 +23,7 @@
 // }
 
 // impl TWAMMMessageImpl of TWAMMMessageTrait {
-    
+
 //     fn to_felt_array(self: @TWAMMMessage) -> Array<felt252> {
 //         let mut arr = array![
 //             (*self.operation_type).into(),
@@ -42,7 +42,7 @@
 //                 arr.append((*id).into());
 //             }
 //         }
-        
+
 //         arr
 //     }
 
@@ -56,10 +56,10 @@
 //             start_time: (*arr[5]).try_into().unwrap(),
 //             end_time: (*arr[6]).try_into().unwrap(),
 //             amount: (*arr[7]).try_into().unwrap(),
-//             token_id: if arr.len() > 8 { 
-//                 Option::Some((*arr[8]).try_into().unwrap()) 
-//             } else { 
-//                 Option::None 
+//             token_id: if arr.len() > 8 {
+//                 Option::Some((*arr[8]).try_into().unwrap())
+//             } else {
+//                 Option::None
 //             }
 //         }
 //     }
@@ -85,5 +85,5 @@ pub struct OrderKey_Copy {
     pub buy_token: ContractAddress,
     pub fee: u128,
     pub start_time: u64,
-    pub end_time: u64
+    pub end_time: u64,
 }

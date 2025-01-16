@@ -121,11 +121,10 @@ mod L2TWAMMBridge {
             let message_struct = self.order_manager.span_to_order_details(message);
             if message_struct.order_operation == 0 {
                 self.handle_deposit(message_struct);
-                return false;
             } else {
-                return true;
+                return false;
             }
-            // return true;
+            return true;
         }
 
         // Admin functionsto set token bridge helper address
@@ -150,8 +149,6 @@ mod L2TWAMMBridge {
         fn get_token_bridge_helper(self: @ContractState) -> ContractAddress {
             return self.token_bridge_helper.read();
         }
-
-       
     }
 
     // Internal helper functions
