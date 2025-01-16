@@ -100,6 +100,8 @@ mod L2TWAMMBridge {
     //l1_handler
     #[l1_handler]
     fn msg_handler_struct(ref self: ContractState, from_address: felt252, data: WithdrawalDetails) {
+        let l1_contract_address = self.l1_contract_address.read();
+        assert(l1_contract_address == from_address.try_into().unwrap(), ERROR_INVALID_L1_ADDRESS);
         if data.order_operation == 2 {
             self.handle_withdrawal(data);
         }
@@ -156,20 +158,10 @@ mod L2TWAMMBridge {
     impl PrivateFunctions of PrivateFunctionsTrait {
         // Processes deposit message from L1
         fn handle_deposit(ref self: ContractState, message: OrderDetails) {
-            let l1_contract_address = self.l1_contract_address.read();
-            assert(
-                message.l1_contract.try_into().unwrap() == l1_contract_address,
-                ERROR_INVALID_L1_ADDRESS,
-            );
             self.order_manager.execute_deposit(message);
         }
         // Processes withdrawal message from L1
         fn handle_withdrawal(ref self: ContractState, message: WithdrawalDetails) {
-            let l1_contract_address = self.l1_contract_address.read();
-            assert(
-                message.l1_contract.try_into().unwrap() == l1_contract_address,
-                ERROR_INVALID_L1_ADDRESS,
-            );
             self.order_manager.execute_withdrawal(message, self.token_bridge_helper.read());
         }
         // Only Owner modifier
