@@ -5,6 +5,6 @@ pub mod types;
 pub mod interfaces;
 pub mod constants;
 pub mod errors;
-pub mod mocks{
+pub mod mocks {
     mod mock_twamm_bridge;
 }

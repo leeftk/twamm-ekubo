@@ -56,7 +56,6 @@ contract L1TWAMMBridgeTest is Test {
         bridge = new L1TWAMMBridge(
             address(daiAddress),
             address(0xCA14057f85F2662257fd2637FdEc558626bCe554),
-            l2EkuboAddress,
             l2EndpointAddress,
             address(0x1268cc171c54F2000402DfF20E93E60DF4c96812)
         );
@@ -150,7 +149,7 @@ contract L1TWAMMBridgeTest is Test {
             start,
             start + 64,
             amount,
-           address(0x123)
+            address(0x123)
         );
         bridge.depositAndCreateOrder(order);
         vm.stopPrank();
