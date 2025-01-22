@@ -156,7 +156,7 @@ mod OrderManagerComponent {
                     id,
                     Order_Created { order_key: order_key_copy, creator: sender, withdrawn: false },
                 );
-                
+
             self.emit(OrderCreated { id, sender, amount: amount_u128 });
         }
 
@@ -225,7 +225,7 @@ mod OrderManagerComponent {
         fn span_to_order_details(
             ref self: ComponentState<TContractState>, span: Span<felt252>,
         ) -> OrderDetails {
-            assert(span.len() == 9, 'Invalid span length');
+            assert(span.len() == 8, 'Invalid span length');
 
             let mut data = span.snapshot;
             let order_operation = *data[0];
@@ -236,18 +236,9 @@ mod OrderManagerComponent {
             let start = *data[5];
             let end = *data[6];
             let amount = *data[7];
-            let l1_contract = *data[8];
 
             return OrderDetails {
-                order_operation,
-                sender,
-                sell_token,
-                buy_token,
-                fee,
-                start,
-                end,
-                amount,
-                l1_contract,
+                order_operation, sender, sell_token, buy_token, fee, start, end, amount,
             };
         }
     }

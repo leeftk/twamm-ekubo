@@ -64,7 +64,7 @@ contract L1TWAMMBridge is Ownable {
         uint256 _l2EndpointAddress,
         address _starknetRegistry
     ) Ownable(msg.sender) {
-        address[] memory addresses = new address[](4);
+        address[] memory addresses = new address[](3);
         addresses[0] = _token;
         addresses[1] = _starknetBridge;
         addresses[2] = _starknetRegistry;
@@ -97,7 +97,7 @@ contract L1TWAMMBridge is Ownable {
         uint256[] memory payload = _encodeDepositPayload(
             msg.sender, params.sellToken, params.buyToken, params.fee, params.start, params.end, params.amount
         );
-        starknetBridge.depositWithMessage{value: msg.value}(address(token), params.amount, l2EndpointAddress, payload);
+        IStarknetTokenBridge(tokenBridge).depositWithMessage{value: msg.value}(address(token), params.amount, l2EndpointAddress, payload);
 
         emit DepositAndCreateOrder(msg.sender, l2EndpointAddress, params.amount, DEFAULT_NONCE);
     }
@@ -223,7 +223,7 @@ contract L1TWAMMBridge is Ownable {
         uint128 end,
         uint128 amount
     ) internal view returns (uint256[] memory) {
-        uint256[] memory payload = new uint256[](9);
+        uint256[] memory payload = new uint256[](8);
         payload[0] = uint256(0); // deposit operation
         payload[1] = uint256(uint160(sender));
         payload[2] = sellToken;
@@ -232,7 +232,6 @@ contract L1TWAMMBridge is Ownable {
         payload[5] = uint256(start);
         payload[6] = uint256(end);
         payload[7] = uint256(amount);
-        payload[8] = uint256(uint160(address(this)));
         return payload;
     }
 
@@ -247,13 +246,12 @@ contract L1TWAMMBridge is Ownable {
         view
         returns (uint256[] memory)
     {
-        uint256[] memory payload = new uint256[](6);
+        uint256[] memory payload = new uint256[](5);
         payload[0] = WITHDRAWAL_OPERATION;
         payload[1] = uint256(uint160(sender));
         payload[2] = uint256(uint160(receiver));
         payload[3] = uint256(uint160(l1Token));
         payload[4] = uint256(order_id);
-        payload[5] = uint256(uint160(address(this)));
         return payload;
     }
 

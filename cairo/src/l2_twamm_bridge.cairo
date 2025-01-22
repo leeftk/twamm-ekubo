@@ -78,14 +78,8 @@ mod L2TWAMMBridge {
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
-        MessageReceived: MessageReceived,
         #[flat]
         OrderManagerEvent: OrderManagerComponent::Event,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct MessageReceived {
-        message: OrderDetails,
     }
 
     // Core Order Manager operations
