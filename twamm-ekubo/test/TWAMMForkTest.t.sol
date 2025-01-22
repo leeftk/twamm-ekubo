@@ -114,8 +114,7 @@ contract L1TWAMMBridgeTest is Test {
             fee: DEFAULT_FEE,
             start: start,
             end: end,
-            amount: DEFAULT_AMOUNT,
-            l1_contract: address(0x123)
+            amount: DEFAULT_AMOUNT
         });
 
         vm.prank(user);
@@ -148,8 +147,7 @@ contract L1TWAMMBridgeTest is Test {
             fee,
             start,
             start + 64,
-            amount,
-            address(0x123)
+            amount
         );
         bridge.depositAndCreateOrder(order);
         vm.stopPrank();

@@ -8,7 +8,7 @@ contract DeployL1TWAMMBridge is Script {
     function run() public returns (L1TWAMMBridge) {
         address token = address(0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766);
         address starknetBridge = address(0xcE5485Cfb26914C5dcE00B9BAF0580364daFC7a4);
-        uint256 l2EndpointAddress = uint256(0x2303a0e4fd858af5f1f053586f4af81fbea049ad91e2d24d97f735e020059a);
+        uint256 l2EndpointAddress = uint256(0x05384d7aa25d47c73d60f2ee889af6b337544c534b05d8560578c06f01db55bd);
 
         address starknetRegistry = address(0xdc1564B4E0b554b26b2CFd2635B84A0777035d11);
 

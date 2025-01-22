@@ -10,7 +10,6 @@ struct OrderParams {
     uint128 start;
     uint128 end;
     uint128 amount;
-    address l1_contract;
 }
 
 struct WithdrawalParams {
@@ -18,5 +17,4 @@ struct WithdrawalParams {
     address receiver;
     uint256 buyToken;
     uint64 order_id;
-    address l1_contract;
 }

@@ -58,8 +58,7 @@ contract L1TWAMMBridgeTest is Test {
             fee: DEFAULT_FEE,
             start: start,
             end: end,
-            amount: DEFAULT_AMOUNT,
-            l1_contract: address(0x123)
+            amount: DEFAULT_AMOUNT
         });
 
         starknetBridge.depositAndCreateOrder{value: DEFAULT_FEE}(params);
@@ -99,8 +98,7 @@ contract L1TWAMMBridgeTest is Test {
             fee: DEFAULT_FEE,
             start: start,
             end: start - 1, // Invalid time range
-            amount: DEFAULT_AMOUNT,
-            l1_contract: address(0x123)
+            amount: DEFAULT_AMOUNT
         });
 
         vm.expectRevert();
@@ -123,8 +121,7 @@ contract L1TWAMMBridgeTest is Test {
             fee: DEFAULT_FEE,
             start: start,
             end: start + DEFAULT_DURATION,
-            amount: DEFAULT_AMOUNT,
-            l1_contract: address(0x123)
+            amount: DEFAULT_AMOUNT
         });
 
         vm.expectRevert();
