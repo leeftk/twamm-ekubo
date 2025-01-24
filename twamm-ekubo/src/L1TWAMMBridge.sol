@@ -88,27 +88,26 @@ contract L1TWAMMBridge is Ownable {
     /// @notice Deposits tokens and creates an order on L2
     /// @param params Order parameters including amount, tokens, time range, and fees
     /// @dev Requires msg.value to cover bridge fees
-    function depositAndCreateOrder(OrderParams memory params) external payable {
+    function depositAndCreateOrder(address _token, OrderParams memory params) external payable {
         if (!validateBridge(address(token))) revert InvalidBridge();
         if (msg.value == 0) revert ZeroValue();
         _validateTimeParams(params.start, params.end);
-        address tokenBridge = starknetRegistry.getBridge(address(token));
-        _handleTokenTransfer(params.amount, address(token), tokenBridge);
+        address tokenBridge = starknetRegistry.getBridge(address(_token));
+        _handleTokenTransfer(params.amount, address(_token), tokenBridge);
         uint256[] memory payload = _encodeDepositPayload(
             msg.sender, params.sellToken, params.buyToken, params.fee, params.start, params.end, params.amount
         );
-        IStarknetTokenBridge(tokenBridge).depositWithMessage{value: msg.value}(address(token), params.amount, l2EndpointAddress, payload);
+        IStarknetTokenBridge(tokenBridge).depositWithMessage{value: msg.value}(address(_token), params.amount, l2EndpointAddress, payload);
 
         emit DepositAndCreateOrder(msg.sender, l2EndpointAddress, params.amount, DEFAULT_NONCE);
     }
 
     /// @notice Initiates a withdrawal from L2 to L1
     /// @param receiver Address that will receive the withdrawn tokens
-    /// @param l1_token Address of the L1 token to withdraw
     /// @param order_id ID of the order to withdraw from
     /// @dev Requires msg.value to cover messaging fees
-    function initiateWithdrawal(address receiver, address l1_token, uint64 order_id) external payable {
-        uint256[] memory message = _encodeWithdrawalPayload(msg.sender, receiver, l1_token, order_id);
+    function initiateWithdrawal(address receiver, uint64 order_id) external payable {
+        uint256[] memory message = _encodeWithdrawalPayload(msg.sender, receiver, order_id);
 
         _sendMessage(l2EndpointAddress, ON_RECEIVE_SELECTOR, message, msg.value);
 
@@ -238,20 +237,18 @@ contract L1TWAMMBridge is Ownable {
     /// @notice Encodes the payload for a withdrawal operation
     /// @param sender Address of the sender
     /// @param receiver Address of the receiver
-    /// @param l1Token Address of the L1 token
     /// @param order_id id of the order to withdraw from
     /// @return Encoded payload array
-    function _encodeWithdrawalPayload(address sender, address receiver, address l1Token, uint64 order_id)
+    function _encodeWithdrawalPayload(address sender, address receiver, uint64 order_id)
         internal
         view
         returns (uint256[] memory)
     {
-        uint256[] memory payload = new uint256[](5);
+        uint256[] memory payload = new uint256[](4);
         payload[0] = WITHDRAWAL_OPERATION;
         payload[1] = uint256(uint160(sender));
         payload[2] = uint256(uint160(receiver));
-        payload[3] = uint256(uint160(l1Token));
-        payload[4] = uint256(order_id);
+        payload[3] = uint256(order_id);
         return payload;
     }
 

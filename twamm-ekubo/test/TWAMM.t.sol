@@ -102,7 +102,7 @@ contract L1TWAMMBridgeTest is Test {
         });
 
         vm.expectRevert();
-        bridge.depositAndCreateOrder{value: DEFAULT_FEE}(params);
+        bridge.depositAndCreateOrder{value: DEFAULT_FEE}(address(token), params);
 
         vm.stopPrank();
     }
@@ -125,7 +125,7 @@ contract L1TWAMMBridgeTest is Test {
         });
 
         vm.expectRevert();
-        bridge.depositAndCreateOrder{value: DEFAULT_FEE}(params);
+        bridge.depositAndCreateOrder{value: DEFAULT_FEE}(address(token), params);
 
         vm.stopPrank();
     }

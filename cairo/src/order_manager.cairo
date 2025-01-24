@@ -210,15 +210,17 @@ mod OrderManagerComponent {
             let helper = ITokenBridgeHelperDispatcher {
                 contract_address: token_bridge_helper_address,
             };
+
+            // Get L2 bridge
             let l2_bridge = helper
-                .get_l2_bridge_from_l1_token(message.buy_token.try_into().unwrap());
+                .get_l2_bridge_from_l2_token(order_key.buy_token.try_into().unwrap());
             let token_bridge = ITokenBridgeDispatcher { contract_address: l2_bridge };
 
+            // Get L1 token
+            let l1_token = token_bridge.get_l1_token(order_key.buy_token);
+
             // This function will fail if the amount being withdrawn is zero
-            token_bridge
-                .initiate_token_withdraw(
-                    message.buy_token.try_into().unwrap(), receiver, amount_sold.into(),
-                );
+            token_bridge.initiate_token_withdraw(l1_token, receiver, amount_sold.into());
         }
 
         // Helper function

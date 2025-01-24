@@ -118,7 +118,7 @@ contract L1TWAMMBridgeTest is Test {
         });
 
         vm.prank(user);
-        bridge.depositAndCreateOrder{value: 0.001 ether}(params);
+        bridge.depositAndCreateOrder{value: 0.001 ether}(address(token), params);
 
         vm.stopPrank();
     }
@@ -131,7 +131,7 @@ contract L1TWAMMBridgeTest is Test {
 
         vm.expectRevert();
         vm.prank(user);
-        bridge.initiateWithdrawal(address(user), address(token), order_id);
+        bridge.initiateWithdrawal(address(user), order_id);
     }
 
     function testInvalidTimeRange() public {
@@ -149,7 +149,7 @@ contract L1TWAMMBridgeTest is Test {
             start + 64,
             amount
         );
-        bridge.depositAndCreateOrder(order);
+        bridge.depositAndCreateOrder(address(token), order);
         vm.stopPrank();
     }
 
