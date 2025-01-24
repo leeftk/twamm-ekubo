@@ -17,7 +17,6 @@ pub struct WithdrawalDetails {
     pub order_operation: felt252,
     pub sender: felt252,
     pub receiver: felt252,
-    pub buy_token: felt252,
     pub order_id: felt252,
 }
 

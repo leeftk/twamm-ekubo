@@ -1,7 +1,7 @@
 {
   "transactions": [
     {
-      "hash": "0x68bf34e094cd5c8aacfb04603c5ecbfc50df0bca95f20c721672e2cc2cc9befb",
+      "hash": null,
       "transactionType": "CREATE",
       "contractName": "L1TWAMMBridge",
       "contractAddress": "0xd3d913c0e3c85d6899b3953169014f87f57138e2",
@@ -24,40 +24,7 @@
       "isFixedGasLimit": false
     }
   ],
-  "receipts": [
-    {
-      "status": "0x1",
-      "cumulativeGasUsed": "0x1125d6f",
-      "logs": [
-        {
-          "address": "0xd3d913c0e3c85d6899b3953169014f87f57138e2",
-          "topics": [
-            "0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x000000000000000000000000ddb342ecc94236c29a5307d3757d0724d759453c"
-          ],
-          "data": "0x",
-          "blockHash": "0x2f878510ccba85b3defeeaa76b9e88ce5e7386209ae34ff1e37172541dcc34ff",
-          "blockNumber": "0x735eb9",
-          "transactionHash": "0x68bf34e094cd5c8aacfb04603c5ecbfc50df0bca95f20c721672e2cc2cc9befb",
-          "transactionIndex": "0x84",
-          "logIndex": "0x15a",
-          "removed": false
-        }
-      ],
-      "logsBloom": "0x00000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000000000000001000000000000000000000000000400000000020000000000000000000800400000000000000000000000400000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020002000000100000000000000000000000000000000000000000000000000000000",
-      "type": "0x2",
-      "transactionHash": "0x68bf34e094cd5c8aacfb04603c5ecbfc50df0bca95f20c721672e2cc2cc9befb",
-      "transactionIndex": "0x84",
-      "blockHash": "0x2f878510ccba85b3defeeaa76b9e88ce5e7386209ae34ff1e37172541dcc34ff",
-      "blockNumber": "0x735eb9",
-      "gasUsed": "0x13aaff",
-      "effectiveGasPrice": "0x766a9b393",
-      "from": "0xddb342ecc94236c29a5307d3757d0724d759453c",
-      "to": null,
-      "contractAddress": "0xd3d913c0e3c85d6899b3953169014f87f57138e2"
-    }
-  ],
+  "receipts": [],
   "libraries": [],
   "pending": [],
   "returns": {
@@ -66,7 +33,7 @@
       "value": "0xd3D913C0e3C85D6899b3953169014f87F57138E2"
     }
   },
-  "timestamp": 1737720986,
+  "timestamp": 1737719521,
   "chain": 11155111,
   "commit": "19821e3"
 }
