@@ -96,9 +96,7 @@ mod L2TWAMMBridge {
     fn msg_handler_struct(ref self: ContractState, from_address: felt252, data: WithdrawalDetails) {
         let l1_contract_address = self.l1_contract_address.read();
         assert(l1_contract_address == from_address.try_into().unwrap(), ERROR_INVALID_L1_ADDRESS);
-        if data.order_operation == 2 {
             self.handle_withdrawal(data);
-        }
     }
 
 
@@ -115,11 +113,7 @@ mod L2TWAMMBridge {
         ) -> bool {
             // Create order or execute deposit with these parameters
             let message_struct = self.order_manager.span_to_order_details(message);
-            if message_struct.order_operation == 0 {
-                self.handle_deposit(message_struct);
-            } else {
-                return false;
-            }
+            self.handle_deposit(message_struct);
             return true;
         }
 
