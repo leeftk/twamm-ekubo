@@ -57,7 +57,11 @@ mod OrderManagerComponent {
     // Storage
     #[storage]
     struct Storage {
+        //TODO: To be removed
         order_id_to_order_created: Map::<u64, Order_Created>,
+
+        //new implementation
+        order_id_to_l1_creator_address: Map::<u64, EthAddress>,
         contract_owner: ContractAddress,
     }
 
@@ -157,7 +161,7 @@ mod OrderManagerComponent {
                     Order_Created { order_key: order_key_copy, creator: sender, withdrawn: false },
                 );
 
-            self.emit(OrderCreated { id, sender, amount: amount_u128 });
+            // self.emit(OrderCreated { id, sender, amount: amount_u128 });
         }
 
         // Execute withdrawal
@@ -166,23 +170,13 @@ mod OrderManagerComponent {
             message: WithdrawalDetails,
             token_bridge_helper_address: ContractAddress,
         ) {
-            let depositor: EthAddress = message.sender.try_into().unwrap();
             let receiver: EthAddress = message.receiver.try_into().unwrap();
             let order_id: u64 = message.order_id.try_into().unwrap();
 
             let order_created = self.order_id_to_order_created.read(order_id);
 
-            // Verify depositor's identity
-            assert(order_created.creator == depositor, ERROR_UNAUTHORIZED);
-
             // Decode order key from stored copy
             let order_key = self.decode_order_key_from_stored_copy(order_created.order_key);
-
-            // Check if withdrawal has already been processed
-            let withdrawal_status = order_created.withdrawn;
-
-            // Ensure the order has not been withdrawn yet
-            assert(withdrawal_status == false, ERROR_ALREADY_WITHDRAWN);
 
             let positions = IPositionsDispatcher {
                 contract_address: contract_address_const::<
