@@ -103,10 +103,9 @@ contract L1TWAMMBridge is Ownable {
         address _token,
         OrderParams memory params
     ) external payable {
-        // if (!validateBridge(address(token))) revert InvalidBridge();
+        if (!validateBridge(address(token))) revert InvalidBridge();
         if (msg.value == 0) revert ZeroValue();
-        // address tokenBridge = starknetRegistry.getBridge(address(_token));
-         address tokenBridge = address(starknetBridge);
+        address tokenBridge = starknetRegistry.getBridge(address(_token));
         _handleTokenTransfer(params.amount, address(_token), tokenBridge);
         uint256[] memory payload = _encodeDepositPayload(
             msg.sender,
@@ -155,8 +154,6 @@ contract L1TWAMMBridge is Ownable {
             payload,
             msg.value
         );
-
-        // emit WithdrawalInitiated(msg.sender, order_id);
     }
 
     /// @notice Claims withdrawn tokens from L2 to L1
@@ -169,8 +166,7 @@ contract L1TWAMMBridge is Ownable {
         uint256 _amount,
         address _recipient
     ) external {
-        // address tokenBridge = starknetRegistry.getBridge(_token);
-         address tokenBridge = address(0x86dC0B32a5045FFa48D9a60B7e7Ca32F11faCd7B);
+        address tokenBridge = starknetRegistry.getBridge(_token);
         IStarknetTokenBridge(tokenBridge).withdraw(_token, _amount, _recipient);
     }
 
@@ -183,8 +179,7 @@ contract L1TWAMMBridge is Ownable {
         OrderParams memory params,
         uint256 nonce
     ) external {
-        // address tokenBridge = starknetRegistry.getBridge(address(token));
-         address tokenBridge = address(starknetBridge);
+        address tokenBridge = starknetRegistry.getBridge(address(l1_token));
         uint256[] memory payload = _encodeDepositPayload(
             msg.sender,
             params.sellToken,
@@ -213,7 +208,7 @@ contract L1TWAMMBridge is Ownable {
         OrderParams memory params,
         uint256 nonce
     ) external {
-        address tokenBridge = starknetRegistry.getBridge(address(token));
+        address tokenBridge = starknetRegistry.getBridge(address(l1_token));
         uint256[] memory payload = _encodeDepositPayload(
             msg.sender,
             params.sellToken,
