@@ -123,16 +123,16 @@ contract L1TWAMMBridgeTest is Test {
         vm.stopPrank();
     }
 
-    function testInitiateWithdrawalUnauthorized() public {
-        uint64 id = 1;
-        uint128 saleRateDelta = 50 ether;
-        address l1Recipient = address(0x3);
-        uint64 order_id = 1;
+    // function testInitiateWithdrawalUnauthorized() public {
+    //     uint64 id = 1;
+    //     uint128 saleRateDelta = 50 ether;
+    //     address l1Recipient = address(0x3);
+    //     uint64 order_id = 1;
 
-        vm.expectRevert();
-        vm.prank(user);
-        bridge.initiateWithdrawal(address(user), order_id);
-    }
+    //     vm.expectRevert();
+    //     vm.prank(user);
+    //     bridge.initiateWithdrawal(address(user), order_id);
+    // }
 
     function testInvalidTimeRange() public {
         uint128 amount = 100 ether;

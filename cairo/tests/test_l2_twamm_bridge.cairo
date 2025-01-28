@@ -37,6 +37,7 @@ mod tests {
             fee: 3,
             start: 1000,
             end: 2000,
+            order_id: 0
         }
     }
 
@@ -62,6 +63,7 @@ mod tests {
             message.fee.into(),
             message.start.into(),
             message.end.into(),
+        
         ];
 
         let message_span = serialized_order.span();
