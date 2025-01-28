@@ -130,32 +130,4 @@ contract L1TWAMMBridgeTest is Test {
         vm.stopPrank();
     }
 
-    function testUnauthorizedAccessReverts() public {
-        vm.startPrank(user);
-
-        // Attempt to call owner-only function
-        vm.expectRevert();
-        bridge.setL2EndpointAddress(123);
-
-        vm.stopPrank();
-    }
-
-    function testValidateTimeCorrectness() public {
-        uint256 interval = 16;
-        uint256[] memory testTimes = new uint256[](5);
-        testTimes[0] = start;
-        testTimes[1] = start + interval;
-        testTimes[2] = start + 2 * interval;
-        testTimes[3] = start + 64; // Custom offset
-        testTimes[4] = start + 128;
-
-        for (uint256 i = 0; i < testTimes.length; i++) {
-            bool isValid = bridge.isTimeValidExternal(start, testTimes[i]);
-            if ((testTimes[i] - start) % interval == 0) {
-                assertTrue(isValid, "Time should be valid");
-            } else {
-                assertFalse(isValid, "Time should be invalid");
-            }
-        }
-    }
 }

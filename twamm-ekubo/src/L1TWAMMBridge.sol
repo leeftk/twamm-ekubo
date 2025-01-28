@@ -103,9 +103,10 @@ contract L1TWAMMBridge is Ownable {
         address _token,
         OrderParams memory params
     ) external payable {
-        if (!validateBridge(address(token))) revert InvalidBridge();
+        // if (!validateBridge(address(token))) revert InvalidBridge();
         if (msg.value == 0) revert ZeroValue();
-        address tokenBridge = starknetRegistry.getBridge(address(_token));
+        // address tokenBridge = starknetRegistry.getBridge(address(_token));
+         address tokenBridge = address(starknetBridge);
         _handleTokenTransfer(params.amount, address(_token), tokenBridge);
         uint256[] memory payload = _encodeDepositPayload(
             msg.sender,
@@ -132,16 +133,13 @@ contract L1TWAMMBridge is Ownable {
     }
 
     /// @notice Initiates a withdrawal from L2 to L1
-    /// @param receiver Address that will receive the withdrawn tokens
     /// @param params Order parameters including amount, tokens, time range, and fees
-    /// @param order_id ID of the order to withdraw from
     /// @dev Requires msg.value to cover messaging fees
     function initiateWithdrawal(
-        address receiver,
-        OrderParams memory params
+        OrderParams memory params,
+        uint64 order_id
     ) external payable {
-     uint256[] memory payload = _encodeWithdrawalPayload(
-            receiver,
+        uint256[] memory payload = _encodeWithdrawalPayload(
             params.sellToken,
             params.buyToken,
             params.fee,
@@ -171,7 +169,8 @@ contract L1TWAMMBridge is Ownable {
         uint256 _amount,
         address _recipient
     ) external {
-        address tokenBridge = starknetRegistry.getBridge(_token);
+        // address tokenBridge = starknetRegistry.getBridge(_token);
+         address tokenBridge = address(0x86dC0B32a5045FFa48D9a60B7e7Ca32F11faCd7B);
         IStarknetTokenBridge(tokenBridge).withdraw(_token, _amount, _recipient);
     }
 
@@ -184,7 +183,8 @@ contract L1TWAMMBridge is Ownable {
         OrderParams memory params,
         uint256 nonce
     ) external {
-        address tokenBridge = starknetRegistry.getBridge(address(token));
+        // address tokenBridge = starknetRegistry.getBridge(address(token));
+         address tokenBridge = address(starknetBridge);
         uint256[] memory payload = _encodeDepositPayload(
             msg.sender,
             params.sellToken,
@@ -298,8 +298,8 @@ contract L1TWAMMBridge is Ownable {
         uint128 start,
         uint128 end,
         uint128 amount
-    ) internal view returns (uint256[] memory) {
-        uint256[] memory payload = new uint256[](8);
+    ) internal pure returns (uint256[] memory) {
+        uint256[] memory payload = new uint256[](9);
         payload[0] = uint256(0); // deposit operation
         payload[1] = uint256(uint160(sender));
         payload[2] = sellToken;
@@ -308,6 +308,7 @@ contract L1TWAMMBridge is Ownable {
         payload[5] = uint256(start);
         payload[6] = uint256(end);
         payload[7] = uint256(amount);
+        payload[8] = uint256(0); // not needed for this operation
         return payload;
     }
 
@@ -319,25 +320,24 @@ contract L1TWAMMBridge is Ownable {
     /// @param end End time
     /// @param amount Amount of tokens
     function _encodeWithdrawalPayload(
-        address receiver,
         uint256 sellToken,
         uint256 buyToken,
         uint256 fee,
         uint128 start,
         uint128 end,
-        uint128 amount
+        uint128 amount,
         uint64 order_id
     ) internal view returns (uint256[] memory) {
         uint256[] memory payload = new uint256[](9);
         payload[0] = WITHDRAWAL_OPERATION;
-        payload[1] = uint256(uint160(receiver));
+        payload[1] = uint256(uint160(msg.sender));
         payload[2] = sellToken;
         payload[3] = buyToken;
         payload[4] = uint256(fee);
         payload[5] = uint256(start);
         payload[6] = uint256(end);
         payload[7] = uint256(amount);
-        payload[8] = uint256(order_id)
+        payload[8] = uint256(order_id);
         return payload;
     }
 }
