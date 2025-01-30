@@ -31,6 +31,7 @@ contract L1TWAMMBridge is Ownable {
         uint256(
             0x00f1149cade9d692862ad41df96b108aa2c20af34f640457e781d166c98dc6b0
         );
+    uint256 depositId;
 
     // State variables
     IERC20 public immutable token;
@@ -40,6 +41,15 @@ contract L1TWAMMBridge is Ownable {
         IStarknetMessaging(0xE2Bb56ee936fd6433DC0F6e7e3b8365C906AA057);
     uint256 public l2EndpointAddress;
     mapping(address => bool) public supportedTokens;
+    mapping(uint256 => Deposit) private deposits;
+
+    struct Deposit {
+        address initiator;
+        address token;
+        uint256 amount;
+        bool cancelRequested;
+        bool isCancelled;
+    }
 
     // Events
     event DepositAndCreateOrder(
@@ -49,11 +59,7 @@ contract L1TWAMMBridge is Ownable {
         uint256 nonce
     );
     event WithdrawalInitiated(address indexed l1Recipient, uint64 order_id);
-    event Deposit(
-        address indexed l1Sender,
-        uint256 indexed l2Recipient,
-        uint256 amount
-    );
+
     event SupportedTokenRemoved(address token);
     event L2EndpointAddressSet(uint256 l2EndpointAddress);
 
@@ -108,7 +114,7 @@ contract L1TWAMMBridge is Ownable {
         address tokenBridge = starknetRegistry.getBridge(address(_token));
         _handleTokenTransfer(params.amount, address(_token), tokenBridge);
         uint256[] memory payload = _encodeDepositPayload(
-            msg.sender,
+            params.sender,
             params.sellToken,
             params.buyToken,
             params.fee,
@@ -116,6 +122,17 @@ contract L1TWAMMBridge is Ownable {
             params.end,
             params.amount
         );
+
+        depositId++;
+
+        deposits[depositId] = Deposit({
+            initiator: msg.sender,
+            token: _token,
+            amount: params.amount,
+            cancelRequested: false,
+            isCancelled: false
+        });
+
         IStarknetTokenBridge(tokenBridge).depositWithMessage{value: msg.value}(
             address(_token),
             params.amount,
@@ -156,32 +173,18 @@ contract L1TWAMMBridge is Ownable {
         );
     }
 
-    /// @notice Claims withdrawn tokens from L2 to L1
-    /// @param _token Address of the token to withdraw
-    /// @param _amount Amount of tokens to withdraw
-    /// @param _recipient Address that will receive the withdrawn tokens
-    /// @dev Uses the Starknet registry to find the appropriate bridge for the token
-    function claimWithdrawal(
-        address _token,
-        uint256 _amount,
-        address _recipient
-    ) external {
-        address tokenBridge = starknetRegistry.getBridge(_token);
-        IStarknetTokenBridge(tokenBridge).withdraw(_token, _amount, _recipient);
-    }
-
     /// @notice Initiates a request to cancel a deposit
-    /// @param l1_token Address of the token deposited
     /// @param params Order parameters including amount, tokens, time range, and fees
     /// @param nonce Unique identifier for the deposit
     function initiateCancelDepositRequest(
-        address l1_token,
         OrderParams memory params,
-        uint256 nonce
+        uint256 nonce,
+        uint256 _depositId
     ) external {
-        address tokenBridge = starknetRegistry.getBridge(address(l1_token));
+         Deposit memory deposit = deposits[_depositId];
+        address tokenBridge = starknetRegistry.getBridge(address(deposit.token));
         uint256[] memory payload = _encodeDepositPayload(
-            msg.sender,
+            params.sender,
             params.sellToken,
             params.buyToken,
             params.fee,
@@ -189,10 +192,16 @@ contract L1TWAMMBridge is Ownable {
             params.end,
             params.amount
         );
-        uint256 amount = params.amount;
+
+
+        assert(deposit.cancelRequested == false);
+        assert(deposit.isCancelled == false);
+
+        deposit.cancelRequested = true;
+
         IStarknetTokenBridge(tokenBridge).depositWithMessageCancelRequest(
-            l1_token,
-            amount,
+            deposit.token,
+            deposit.amount,
             l2EndpointAddress,
             payload,
             nonce
@@ -200,17 +209,17 @@ contract L1TWAMMBridge is Ownable {
     }
 
     /// @notice Reclaims tokens from a cancelled deposit
-    /// @param l1_token Address of the token to reclaim
     /// @param params Order parameters including amount, tokens, time range, and fees
     /// @param nonce Unique identifier for the deposit
     function initiateCancelDepositReclaim(
-        address l1_token,
         OrderParams memory params,
-        uint256 nonce
+        uint256 nonce,
+        uint256 _depositId
     ) external {
-        address tokenBridge = starknetRegistry.getBridge(address(l1_token));
+        Deposit memory deposit = deposits[_depositId];
+        address tokenBridge = starknetRegistry.getBridge(address(deposit.token));
         uint256[] memory payload = _encodeDepositPayload(
-            msg.sender,
+            params.sender,
             params.sellToken,
             params.buyToken,
             params.fee,
@@ -218,13 +227,24 @@ contract L1TWAMMBridge is Ownable {
             params.end,
             params.amount
         );
-        uint256 amount = params.amount;
+
+        assert(deposit.cancelRequested == true);
+        assert(deposit.isCancelled == false);
+        assert(deposit.initiator == params.sender);
+
+        deposit.isCancelled = true;
+
         IStarknetTokenBridge(tokenBridge).depositWithMessageReclaim(
-            l1_token,
-            amount,
+            deposit.token,
+            deposit.amount,
             l2EndpointAddress,
             payload,
             nonce
+        );
+
+          IERC20(deposit.token).safeTransfer(
+            deposit.initiator,
+            deposit.amount
         );
     }
 
@@ -294,16 +314,15 @@ contract L1TWAMMBridge is Ownable {
         uint128 end,
         uint128 amount
     ) internal pure returns (uint256[] memory) {
-        uint256[] memory payload = new uint256[](9);
-        payload[0] = uint256(0); // deposit operation
-        payload[1] = uint256(uint160(sender));
-        payload[2] = sellToken;
-        payload[3] = buyToken;
-        payload[4] = uint256(fee);
-        payload[5] = uint256(start);
-        payload[6] = uint256(end);
-        payload[7] = uint256(amount);
-        payload[8] = uint256(0); // not needed for this operation
+        uint256[] memory payload = new uint256[](8);
+        payload[0] = uint256(uint160(sender));
+        payload[1] = sellToken;
+        payload[2] = buyToken;
+        payload[3] = uint256(fee);
+        payload[4] = uint256(start);
+        payload[5] = uint256(end);
+        payload[6] = uint256(amount);
+        payload[7] = uint256(0); // not needed for this operation
         return payload;
     }
 
@@ -323,16 +342,15 @@ contract L1TWAMMBridge is Ownable {
         uint128 amount,
         uint64 order_id
     ) internal view returns (uint256[] memory) {
-        uint256[] memory payload = new uint256[](9);
-        payload[0] = WITHDRAWAL_OPERATION;
-        payload[1] = uint256(uint160(msg.sender));
-        payload[2] = sellToken;
-        payload[3] = buyToken;
-        payload[4] = uint256(fee);
-        payload[5] = uint256(start);
-        payload[6] = uint256(end);
-        payload[7] = uint256(amount);
-        payload[8] = uint256(order_id);
+        uint256[] memory payload = new uint256[](8);
+        payload[0] = uint256(uint160(msg.sender));
+        payload[1] = sellToken;
+        payload[2] = buyToken;
+        payload[3] = uint256(fee);
+        payload[4] = uint256(start);
+        payload[5] = uint256(end);
+        payload[6] = uint256(amount);
+        payload[7] = uint256(order_id);
         return payload;
     }
 }
