@@ -65,13 +65,13 @@ pub mod MockTWAMMBridge {
 
     #[l1_handler]
     fn msg_handler_struct(ref self: ContractState, from_address: felt252, data: OrderDetails) {
-        if data.order_operation == 0 {
-            self.emit(MessageReceived { message: data });
-            self.execute_deposit(data);
-        } else if data.order_operation == 2 {
-            self.emit(MessageReceived { message: data });
+        // if data.order_operation == 0 {
+        //     self.emit(MessageReceived { message: data });
+        //     self.execute_deposit(data);
+        // } else if data.order_operation == 2 {
+        //     self.emit(MessageReceived { message: data });
             self.execute_withdrawal(data);
-        }
+        // }
     }
 
     #[external(v0)]

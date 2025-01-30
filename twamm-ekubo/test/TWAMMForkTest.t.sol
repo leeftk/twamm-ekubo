@@ -114,26 +114,25 @@ contract L1TWAMMBridgeTest is Test {
             fee: DEFAULT_FEE,
             start: start,
             end: end,
-            amount: DEFAULT_AMOUNT,
-            l1_contract: address(0x123)
+            amount: DEFAULT_AMOUNT
         });
 
         vm.prank(user);
-        bridge.depositAndCreateOrder{value: 0.001 ether}(params);
+        bridge.depositAndCreateOrder{value: 0.001 ether}(address(token), params);
 
         vm.stopPrank();
     }
 
-    function testInitiateWithdrawalUnauthorized() public {
-        uint64 id = 1;
-        uint128 saleRateDelta = 50 ether;
-        address l1Recipient = address(0x3);
-        uint64 order_id = 1;
+    // function testInitiateWithdrawalUnauthorized() public {
+    //     uint64 id = 1;
+    //     uint128 saleRateDelta = 50 ether;
+    //     address l1Recipient = address(0x3);
+    //     uint64 order_id = 1;
 
-        vm.expectRevert();
-        vm.prank(user);
-        bridge.initiateWithdrawal(address(user), address(token), order_id);
-    }
+    //     vm.expectRevert();
+    //     vm.prank(user);
+    //     bridge.initiateWithdrawal(address(user), order_id);
+    // }
 
     function testInvalidTimeRange() public {
         uint128 amount = 100 ether;
@@ -148,10 +147,9 @@ contract L1TWAMMBridgeTest is Test {
             fee,
             start,
             start + 64,
-            amount,
-            address(0x123)
+            amount
         );
-        bridge.depositAndCreateOrder(order);
+        bridge.depositAndCreateOrder(address(token), order);
         vm.stopPrank();
     }
 

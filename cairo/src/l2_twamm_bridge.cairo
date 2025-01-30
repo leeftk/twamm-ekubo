@@ -1,18 +1,12 @@
-use starknet::{ContractAddress, get_contract_address, contract_address_const, get_caller_address};
+use starknet::{ContractAddress, EthAddress, get_contract_address, contract_address_const, get_caller_address};
 use starknet::storage::{
     Map, StoragePointerWriteAccess, StorageMapReadAccess, StoragePointerReadAccess, StoragePath,
     StoragePathEntry, StorageMapWriteAccess,
 };
-use ekubo::extensions::interfaces::twamm::{OrderKey, OrderInfo};
-use ekubo::types::keys::PoolKey;
-use ekubo::types::i129::{i129};
-use ekubo::interfaces::positions::{IPositionsDispatcher, IPositionsDispatcherTrait};
-use ekubo::interfaces::core::{ICoreDispatcherTrait, ICoreDispatcher, IExtensionDispatcher};
-use starknet::EthAddress;
 use super::token_bridge_helper::{
     ITokenBridgeHelper, ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait,
 };
-use super::types::{OrderDetails, OrderKey_Copy, WithdrawalDetails};
+use super::types::{OrderDetails};
 use super::interfaces::{
     ITokenBridge, ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait, IERC20, IERC20Dispatcher,
     IERC20DispatcherTrait,
@@ -42,21 +36,16 @@ mod L2TWAMMBridge {
     use ekubo::interfaces::positions::{IPositionsDispatcher, IPositionsDispatcherTrait};
     use ekubo::extensions::interfaces::twamm::{OrderKey};
     use starknet::{
-        ContractAddress, get_contract_address, contract_address_const, get_block_timestamp,
+        ContractAddress, get_contract_address, contract_address_const, get_caller_address
     };
 
     use super::{
         Map, StoragePointerWriteAccess, StorageMapReadAccess, StoragePointerReadAccess, StoragePath,
-        StoragePathEntry, StorageMapWriteAccess,
+        StoragePathEntry, StorageMapWriteAccess, EthAddress
     };
     use super::{ITokenBridge, ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait};
-    use super::EthAddress;
-    use super::{get_caller_address};
     use core::array::ArrayTrait;
     use super::OrderDetails;
-    use super::WithdrawalDetails;
-    use super::{IERC20, IERC20Dispatcher, IERC20DispatcherTrait};
-    use super::OrderKey_Copy;
     use super::{ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait};
     use super::OrderManagerComponent;
     use super::{ERROR_UNAUTHORIZED, ERROR_INVALID_L1_ADDRESS};
@@ -78,14 +67,8 @@ mod L2TWAMMBridge {
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
-        MessageReceived: MessageReceived,
         #[flat]
         OrderManagerEvent: OrderManagerComponent::Event,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct MessageReceived {
-        message: OrderDetails,
     }
 
     // Core Order Manager operations
@@ -99,14 +82,9 @@ mod L2TWAMMBridge {
 
     //l1_handler
     #[l1_handler]
-    fn msg_handler_struct(ref self: ContractState, from_address: felt252, data: WithdrawalDetails) {
-        let l1_contract_address = self.l1_contract_address.read();
-        assert(l1_contract_address == from_address.try_into().unwrap(), ERROR_INVALID_L1_ADDRESS);
-        if data.order_operation == 2 {
-            self.handle_withdrawal(data);
-        }
+    fn msg_handler_struct(ref self: ContractState, from_address: felt252, data: OrderDetails) {
+        self.handle_withdrawal(data);
     }
-
 
     // External Functions
     #[external(v0)]
@@ -121,11 +99,7 @@ mod L2TWAMMBridge {
         ) -> bool {
             // Create order or execute deposit with these parameters
             let message_struct = self.order_manager.span_to_order_details(message);
-            if message_struct.order_operation == 0 {
-                self.handle_deposit(message_struct);
-            } else {
-                return false;
-            }
+            self.handle_deposit(message_struct);
             return true;
         }
 
@@ -161,7 +135,7 @@ mod L2TWAMMBridge {
             self.order_manager.execute_deposit(message);
         }
         // Processes withdrawal message from L1
-        fn handle_withdrawal(ref self: ContractState, message: WithdrawalDetails) {
+        fn handle_withdrawal(ref self: ContractState, message: OrderDetails) {
             self.order_manager.execute_withdrawal(message, self.token_bridge_helper.read());
         }
         // Only Owner modifier
