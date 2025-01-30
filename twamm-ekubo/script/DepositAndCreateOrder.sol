@@ -69,7 +69,7 @@ contract DepositAndCreateOrder is Script {
         //     0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766, params
         // );
 
-         IL1TWAMMBridge(bridgeAddress).initiateWithdrawal{value: fee}(params, 561);
+        IL1TWAMMBridge(bridgeAddress).initiateWithdrawal{value: fee}(params, 561);
         // IL1TWAMMBridge(bridgeAddress).setL2EndpointAddress(l2EndpointAddress);
         // IL1TWAMMBridge(bridgeAddress).claimWithdrawal(usdcBuyToken, 3, msg.sender);
 

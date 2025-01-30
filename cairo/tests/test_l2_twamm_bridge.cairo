@@ -29,7 +29,6 @@ mod tests {
 
     fn create_mock_order_details() -> OrderDetails {
         OrderDetails {
-            order_operation: 0, //deposit operation
             sender: 123.try_into().unwrap(), // Mock ETH address
             sell_token: 0x123.try_into().unwrap(), // Mock sell token address
             buy_token: 0x456.try_into().unwrap(), // Mock buy token address
@@ -55,7 +54,6 @@ mod tests {
         let message = create_mock_order_details();
 
         let serialized_order = array![
-            message.order_operation.into(),
             message.sender.into(),
             message.sell_token.into(),
             message.buy_token.into(),

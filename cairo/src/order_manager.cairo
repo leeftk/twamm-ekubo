@@ -166,17 +166,16 @@ mod OrderManagerComponent {
             ref self: ComponentState<TContractState>, span: Span<felt252>,
         ) -> OrderDetails {
             let mut data = span.snapshot;
-            let order_operation = *data[0];
-            let sender = *data[1];
-            let sell_token = *data[2];
-            let buy_token = *data[3];
-            let fee = *data[4];
-            let start = *data[5];
-            let end = *data[6];
-            let amount = *data[7];
+            let sender = *data[0];
+            let sell_token = *data[1];
+            let buy_token = *data[2];
+            let fee = *data[3];
+            let start = *data[4];
+            let end = *data[5];
+            let amount = *data[6];
 
             return OrderDetails {
-                order_operation, sender, sell_token, buy_token, fee, start, end, amount, order_id:0
+               sender, sell_token, buy_token, fee, start, end, amount, order_id:0
             };
         }
     }
