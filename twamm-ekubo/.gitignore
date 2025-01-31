@@ -1,13 +1,14 @@
 # Compiler files
 cache/
 out/
+out.json
 
 # Ignores development broadcast logs
 !/broadcast
 /broadcast/*/31337/
 /broadcast/*/11155111/
 /broadcast/**/dry-run/
-broadcast/
+/broadcast
 
 # Docs
 docs/
