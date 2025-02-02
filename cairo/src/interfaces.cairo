@@ -1,4 +1,4 @@
-use starknet::{ContractAddress, contract_address_const, get_caller_address, EthAddress};
+use starknet::{ContractAddress, EthAddress};
 
 #[starknet::interface]
 pub trait ITokenBridge<TContractState> {

@@ -1,4 +1,4 @@
-use starknet::{ContractAddress, EthAddress, get_contract_address, contract_address_const, get_caller_address};
+use starknet::{ContractAddress, EthAddress, get_caller_address};
 use starknet::storage::{
     Map, StoragePointerWriteAccess, StorageMapReadAccess, StoragePointerReadAccess, StoragePath,
     StoragePathEntry, StorageMapWriteAccess,
@@ -7,12 +7,8 @@ use super::token_bridge_helper::{
     ITokenBridgeHelper, ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait,
 };
 use super::types::{OrderDetails};
-use super::interfaces::{
-    ITokenBridge, ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait, IERC20, IERC20Dispatcher,
-    IERC20DispatcherTrait,
-};
 use super::order_manager::OrderManagerComponent;
-use super::errors::{ERROR_UNAUTHORIZED, ERROR_INVALID_L1_ADDRESS};
+use super::errors::{ERROR_UNAUTHORIZED};
 
 
 #[starknet::interface]
@@ -35,20 +31,14 @@ pub trait IL2TWAMMBridge<TContractState> {
 mod L2TWAMMBridge {
     use ekubo::interfaces::positions::{IPositionsDispatcher, IPositionsDispatcherTrait};
     use ekubo::extensions::interfaces::twamm::{OrderKey};
-    use starknet::{
-        ContractAddress, get_contract_address, contract_address_const, get_caller_address
-    };
-
     use super::{
         Map, StoragePointerWriteAccess, StorageMapReadAccess, StoragePointerReadAccess, StoragePath,
-        StoragePathEntry, StorageMapWriteAccess, EthAddress
+        StoragePathEntry, StorageMapWriteAccess, EthAddress, ContractAddress, get_caller_address,
     };
-    use super::{ITokenBridge, ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait};
-    use core::array::ArrayTrait;
     use super::OrderDetails;
     use super::{ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait};
     use super::OrderManagerComponent;
-    use super::{ERROR_UNAUTHORIZED, ERROR_INVALID_L1_ADDRESS};
+    use super::{ERROR_UNAUTHORIZED};
 
     // Manages order-related operations
     component!(path: OrderManagerComponent, storage: order_manager, event: OrderManagerEvent);

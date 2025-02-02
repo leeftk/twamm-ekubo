@@ -1,10 +1,8 @@
-use starknet::{ContractAddress, contract_address_const, get_caller_address};
+use starknet::{ContractAddress, EthAddress, get_caller_address};
 use starknet::storage::{
     Map, StoragePointerWriteAccess, StorageMapReadAccess, StoragePointerReadAccess, StoragePath,
     StoragePathEntry, StorageMapWriteAccess,
 };
-use starknet::EthAddress;
-use super::interfaces::{ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait};
 use super::constants::TOKEN_BRIDGE_MAPPING;
 use super::errors::{ERROR_UNAUTHORIZED, ERROR_INVALID_TOKEN};
 
@@ -18,8 +16,7 @@ trait ITokenBridgeHelper<TContractState> {
 #[starknet::contract]
 mod TokenBridgeHelper {
     use super::{
-        ContractAddress, contract_address_const, get_caller_address, EthAddress, Map,
-        ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait, TOKEN_BRIDGE_MAPPING,
+        ContractAddress, get_caller_address, EthAddress, Map, TOKEN_BRIDGE_MAPPING,
         ERROR_UNAUTHORIZED, ERROR_INVALID_TOKEN,
     };
 

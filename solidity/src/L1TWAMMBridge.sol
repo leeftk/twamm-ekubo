@@ -20,13 +20,6 @@ contract L1TWAMMBridge is Ownable {
     using SafeERC20 for IERC20;
 
     // Updated constants visibility to internal
-    uint256 internal constant TIME_SPACING_SIZE = 16;
-    uint256 internal constant LOG_SCALE_FACTOR = 4;
-    uint256 internal constant DEPOSIT_OPERATION = 0;
-    uint256 internal constant WITHDRAWAL_OPERATION = 2;
-    uint256 internal constant DEFAULT_NONCE = 1;
-    uint256 internal constant WITHDRAWAL_PAYLOAD_SIZE = 8;
-    uint256 internal constant DEPOSIT_PAYLOAD_SIZE = 7;
     uint256 internal constant ON_RECEIVE_SELECTOR =
         uint256(
             0x00f1149cade9d692862ad41df96b108aa2c20af34f640457e781d166c98dc6b0
@@ -43,6 +36,8 @@ contract L1TWAMMBridge is Ownable {
     mapping(address => bool) public supportedTokens;
     mapping(uint256 => Deposit) private deposits;
 
+    // Stores information about a deposit including the
+    // initiator, token, amount, and cancellation status.
     struct Deposit {
         address initiator;
         address token;
@@ -55,8 +50,7 @@ contract L1TWAMMBridge is Ownable {
     event DepositAndCreateOrder(
         address indexed l1Sender,
         uint256 indexed l2Recipient,
-        uint256 amount,
-        uint256 nonce
+        uint256 amount
     );
     event WithdrawalInitiated(address indexed l1Recipient, uint64 order_id);
 
@@ -143,8 +137,7 @@ contract L1TWAMMBridge is Ownable {
         emit DepositAndCreateOrder(
             msg.sender,
             l2EndpointAddress,
-            params.amount,
-            DEFAULT_NONCE
+            params.amount
         );
     }
 
@@ -192,7 +185,6 @@ contract L1TWAMMBridge is Ownable {
             params.end,
             params.amount
         );
-
 
         assert(deposit.cancelRequested == false);
         assert(deposit.isCancelled == false);

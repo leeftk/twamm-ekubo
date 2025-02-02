@@ -1,7 +1,4 @@
-use starknet::{
-    ContractAddress, get_contract_address, contract_address_const, get_caller_address,
-    get_block_timestamp, EthAddress
-};
+use starknet::{ContractAddress, get_contract_address, contract_address_const, EthAddress};
 use starknet::storage::{
     Map, StoragePointerWriteAccess, StorageMapReadAccess, StoragePointerReadAccess, StoragePath,
     StoragePathEntry, StorageMapWriteAccess,
@@ -11,12 +8,8 @@ use ekubo::interfaces::positions::{IPositionsDispatcher, IPositionsDispatcherTra
 use super::token_bridge_helper::{ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait};
 use super::interfaces::{ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait};
 use super::types::{OrderDetails};
-use super::errors::{
-    ERROR_UNAUTHORIZED, ERROR_ALREADY_WITHDRAWN, ERROR_ZERO_AMOUNT, ERROR_NO_TOKENS_MINTED,
-};
+
 #[derive(Drop)]
-
-
 #[starknet::interface]
 trait IOrderManager<TContractState> {
     fn create_order_key(ref self: TContractState, message: OrderDetails) -> OrderKey;
@@ -32,23 +25,15 @@ trait IOrderManager<TContractState> {
 #[starknet::component]
 mod OrderManagerComponent {
     use super::IOrderManager;
-    use super::{
-        OrderKey, OrderDetails, EthAddress,
-        ContractAddress,
-    };
+    use super::{OrderKey, OrderDetails};
     use super::{
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
         StoragePointerWriteAccess, StoragePath, StoragePathEntry, IPositionsDispatcher,
-        IPositionsDispatcherTrait,
-    };
-    use starknet::{
-        get_block_timestamp, get_caller_address, contract_address_const, get_contract_address,
+        IPositionsDispatcherTrait, contract_address_const, get_contract_address, EthAddress,
+        ContractAddress,
     };
     use super::{ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait};
     use super::{ITokenBridgeHelperDispatcher, ITokenBridgeHelperDispatcherTrait};
-    use super::{
-        ERROR_UNAUTHORIZED, ERROR_ALREADY_WITHDRAWN, ERROR_ZERO_AMOUNT, ERROR_NO_TOKENS_MINTED,
-    };
 
     const U128_MAX: u256 = 0xffffffffffffffffffffffffffffffff;
 
@@ -89,17 +74,16 @@ mod OrderManagerComponent {
             ref self: ComponentState<TContractState>, message: OrderDetails,
         ) -> OrderKey {
             OrderKey {
-            sell_token: message.sell_token.try_into().unwrap(),
-            buy_token: message.buy_token.try_into().unwrap(),
-            fee: message.fee.try_into().unwrap(),
-            start_time: message.start.try_into().unwrap(),
-            end_time: message.end.try_into().unwrap(),
+                sell_token: message.sell_token.try_into().unwrap(),
+                buy_token: message.buy_token.try_into().unwrap(),
+                fee: message.fee.try_into().unwrap(),
+                start_time: message.start.try_into().unwrap(),
+                end_time: message.end.try_into().unwrap(),
             }
         }
 
         // Execute deposit
         fn execute_deposit(ref self: ComponentState<TContractState>, message: OrderDetails) {
-
             // Validate and convert message amount to u128
             assert(message.amount.try_into().unwrap() <= U128_MAX, 'Amount exceeds u128 max');
             let amount_u128: u128 = message.amount.try_into().unwrap();
@@ -161,7 +145,7 @@ mod OrderManagerComponent {
             token_bridge.initiate_token_withdraw(l1_token, order_creator, amount_sold.into());
         }
 
-        // Helper function
+        // Helper function to convert Span<felt252> to OrderDetails
         fn span_to_order_details(
             ref self: ComponentState<TContractState>, span: Span<felt252>,
         ) -> OrderDetails {
@@ -175,7 +159,7 @@ mod OrderManagerComponent {
             let amount = *data[6];
 
             return OrderDetails {
-               sender, sell_token, buy_token, fee, start, end, amount, order_id:0
+                sender, sell_token, buy_token, fee, start, end, amount, order_id: 0,
             };
         }
     }

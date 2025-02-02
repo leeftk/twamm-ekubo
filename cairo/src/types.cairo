@@ -12,18 +12,3 @@ pub struct OrderDetails {
     pub order_id: felt252
 }
 
-#[derive(Drop, Serde, Copy, starknet::Store)]
-pub struct OrderKey_Copy {
-    pub sell_token: ContractAddress,
-    pub buy_token: ContractAddress,
-    pub fee: u128,
-    pub start_time: u64,
-    pub end_time: u64,
-}
-
-#[derive(Drop, Serde, starknet::Store)]
-struct Order_Created {
-    order_key: OrderKey_Copy,
-    creator: EthAddress,
-    withdrawn: bool,
-}

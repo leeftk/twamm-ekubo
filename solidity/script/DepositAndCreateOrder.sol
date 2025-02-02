@@ -7,25 +7,8 @@ import {OrderParams} from "../src/types/OrderParams.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IStarknetMessaging} from "../src/interfaces/IStarknetMessaging.sol";
 import {IStarknetTokenBridge} from "../src/interfaces/IStarknetTokenBridge.sol";
+import {IL1TWAMMBridge} from "../src/interfaces/IL1TWAMMBridge.sol";
 
-interface IL1TWAMMBridge {
-    function depositAndCreateOrder(address _token, OrderParams memory params) external payable;
-    function deposit(uint256 amount, uint256 l2EndpointAddress) external payable;
-    function initiateWithdrawal(OrderParams memory params, uint64 order_id) external payable;
-    function _sendMessage(uint256 contractAddress, uint256 selector, uint256[] memory payload) external payable;
-    function setL2EndpointAddress(uint256 _l2EndpointAddress) external;
-    function initiateCancelDepositRequest(address l1_token, OrderParams memory params, uint256 nonce) external;
-    function initiateCancelDepositReclaim(address l1_token, OrderParams memory params, uint256 nonce) external;
-
-    function claimWithdrawal(address token, uint256 amount, address recipient) external;
-}
-
-interface IStarknetGateBridge {
-    function depositWithMessage(address token, uint256 amount, uint256 l2Recipient, uint256[] calldata message)
-        external
-        payable;
-    function withdraw(address token, uint256 amount, address recipient) external;
-}
 
 contract DepositAndCreateOrder is Script {
     function run() public {
@@ -70,19 +53,6 @@ contract DepositAndCreateOrder is Script {
         // );
 
         IL1TWAMMBridge(bridgeAddress).initiateWithdrawal{value: fee}(params, 561);
-        // IL1TWAMMBridge(bridgeAddress).setL2EndpointAddress(l2EndpointAddress);
-        // IL1TWAMMBridge(bridgeAddress).claimWithdrawal(usdcBuyToken, 3, msg.sender);
-
-        // uint256[] memory payload = new uint256[](4);
-        // payload[0] = 2;
-        // payload[1] = uint256(uint160(msg.sender));
-        // payload[2] = uint256(uint160(msg.sender));
-        // payload[3] = uint256(557);
-
-        // uint256 L2_SELECTOR_VALUE = uint256(
-        //     0x00f1149cade9d692862ad41df96b108aa2c20af34f640457e781d166c98dc6b0
-        // );
-        // snMessaging.sendMessageToL2{value: fee}(l2EndpointAddress, L2_SELECTOR_VALUE, payload);
 
         vm.stopBroadcast();
     }
