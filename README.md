@@ -50,15 +50,14 @@ contract DeployL1TWAMMBridge is Script {
 function run() public returns (L1TWAMMBridge) {
 address token = address(0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766);
 address starknetBridge = address(0xcE5485Cfb26914C5dcE00B9BAF0580364daFC7a4);
-address l2EkuboAddress = address(0x123);
-uint256 l2EndpointAddress = uint256(0x073710eda3a2a82f548bf0743c3db7fc4cb1273adfac61a02ba6d4f541894fbd);
+uint256 l2EndpointAddress = <Address of the L2 contract>;
 
         address starknetRegistry = address(0xdc1564B4E0b554b26b2CFd2635B84A0777035d11);
 
         vm.startBroadcast();
 
         L1TWAMMBridge bridge =
-            new L1TWAMMBridge(token, starknetBridge, l2EkuboAddress, l2EndpointAddress, starknetRegistry);
+            new L1TWAMMBridge(token, starknetBridge, l2EndpointAddress, starknetRegistry);
 
         vm.stopBroadcast();
 
@@ -89,7 +88,7 @@ sncast --account <account_name>  script run set_l2_token_helper   --url <YOUR_RP
 ```
 ### Interact with the L1 Contract
 
-1. Create a file in the scripts file and call it `DepositAndCreateOrder.sol` and paste this in it.
+1. To create an order with STRK and USDC as buy and sell tokens, create a file in the scripts folder and call it `DepositAndCreateOrder.sol` and paste this in it.
 ```
     // SPDX-License-Identifier: MIT
     pragma solidity ^0.8.20;
@@ -99,46 +98,36 @@ sncast --account <account_name>  script run set_l2_token_helper   --url <YOUR_RP
     import {OrderParams} from "../src/types/OrderParams.sol";
     import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
     import {IStarknetMessaging} from "../src/interfaces/IStarknetMessaging.sol";
-
-    interface IL1TWAMMBridge {
-    function depositAndCreateOrder(OrderParams memory params) external payable;
-    function deposit(uint256 amount, uint256 l2EndpointAddress) external payable;
-    function initiateWithdrawal(uint256 amount, address l1_token) external payable;
-    function _sendMessage(uint256 contractAddress, uint256 selector, uint256[] memory payload) external payable;
-    function setL2EndpointAddress(uint256 _l2EndpointAddress) external;
-    function initiateCancelDepositRequest(address l1_token, uint256 amount, uint256 nonce) external;
-    }
+    import {IL1TWAMMBridge} from "../src/interfaces/IL1TWAMMBridge.sol";
 
     contract DepositAndCreateOrder is Script {
     function run() public {
     // Configuration
-    address strkToken = 0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766; //stark on l1 sepolia
-    address usdcBuyToken = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238; //usdc on l1 sepolia;
-    address bridgeAddress = 0xFD0bd7eb64A790bA81d8e03c8D24b516e38Ae708;
-    uint256 l2EndpointAddress = uint256(0x073710eda3a2a82f548bf0743c3db7fc4cb1273adfac61a02ba6d4f541894fbd);
-    uint256 sellTokenAddress = 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d; //stark on l2
-    uint256 buyTokenAddress = 0x053b40a647cedfca6ca84f542a0fe36736031905a9639a7f19a3c1e66bfd5080; //usdc on l2
+    address L1DepositToken = 0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766; //stark on l1 sepolia
+    address L1BuyToken = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238; //usdc on l1 sepolia;
+    address bridgeAddress = <Address of the L1 contract>;
+    uint256 l2EndpointAddress = <Address of the L2 contract>;
+    uint256 L2SellToken = 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d; //stark on l2
+    uint256 L2BuyToken = 0x053b40a647cedfca6ca84f542a0fe36736031905a9639a7f19a3c1e66bfd5080; //usdc on l2
 
         // Order parameters
         uint128 currentTimestamp = uint128(block.timestamp);
-        uint128 difference = 16 - (currentTimestamp % 16);  // gets the difference between the current timestamp and the next 16 second interval
+        uint128 difference = 16 - (currentTimestamp % 16);
         uint128 start = currentTimestamp + difference;
         uint128 end = start + 128;
 
-        uint128 amount = 0.0007 * 10 ** 18;
+        uint128 amount = 0.05 * 10 ** 18;
         uint128 fee = 0.0005 ether;
-        uint256 gasPrice = block.basefee * 1;
-
         vm.startBroadcast();
 
         // Approve token spending
-        IERC20(strkToken).approve(bridgeAddress, type(uint256).max);
+        IERC20(L1DepositToken).approve(bridgeAddress, type(uint256).max);
 
         // Create order parameters
         OrderParams memory params = OrderParams({
             sender: msg.sender,
-            sellToken: sellTokenAddress,
-            buyToken: buyTokenAddress,
+            sellToken: L2SellToken,
+            buyToken: L2BuyToken,
             fee: 170141183460469235273462165868118016,
             start: start,
             end: end,
@@ -147,16 +136,14 @@ sncast --account <account_name>  script run set_l2_token_helper   --url <YOUR_RP
 
 
         // Create order
-        IL1TWAMMBridge(bridgeAddress).depositAndCreateOrder{value: fee, gas: gasPrice}(params);
+        IL1TWAMMBridge(bridgeAddress).depositAndCreateOrder{value: fee}(L1DepositToken, params);
 
         // Initiate Withdrawal
-        IL1TWAMMBridge(bridgeAddress).initiateWithdrawal{value: fee}(amount, 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238);
+        IL1TWAMMBridge(bridgeAddress).initiateWithdrawal{value: fee}(params, order_id);
 
         // Initiate deposit cancel request
-        IL1TWAMMBridge(bridgeAddress).initiateCancelDepositRequest{gas: gasPrice}(0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766, amount, nonce_of_the_deposit_action);
+        IL1TWAMMBridge(bridgeAddress).initiateCancelDepositRequest(L1DepositToken, amount, nonce_of_the_deposit_action);
 
-        // Set L2 address, in case a new L2 contract is deployed
-        // IL1TWAMMBridge(bridgeAddress).setL2EndpointAddress(l2EndpointAddress);
         vm.stopBroadcast();
     }
 
@@ -171,14 +158,11 @@ sncast --account <account_name>  script run set_l2_token_helper   --url <YOUR_RP
 3. To withdraw:
    - Call the `initiateWithdrawal` function on the L1TWAMMBridge contract, specifying the amount and L1 token address.
 
-4. To Update the L2 endpoint address in the L1TWAMMBridge contract (Not necessary except in a situation when a different L2 endpoint from the one in the constructor is to be used).
-   - Call the `setL2EndpointAddress` passing in the new L2 Endpoint address
-
-5. To run the script, copy and paste this in your terminal.
+4. To run the script, copy and paste this in your terminal.
 ```
 forge script --chain sepolia script/DepositAndCreateOrder.sol:DepositAndCreateOrder --rpc-url $SEPOLIA_RPC_URL --private-key $PRIVATE_KEY  --broadcast -vvvv
 ``` 
 
-6. Monitor the L2TWAMMBridge contract for received messages and processed deposits/withdrawals.
+5. Monitor the L2TWAMMBridge contract for received messages and processed deposits/withdrawals.
 
 

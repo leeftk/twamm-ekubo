@@ -14,10 +14,8 @@ use super::errors::{ERROR_UNAUTHORIZED};
 #[starknet::interface]
 pub trait IL2TWAMMBridge<TContractState> {
     fn set_token_bridge_helper(ref self: TContractState, address: ContractAddress);
-    fn set_l1_contract_address(ref self: TContractState, address: EthAddress);
     fn get_contract_owner(self: @TContractState) -> ContractAddress;
     fn get_token_bridge_helper(self: @TContractState) -> ContractAddress;
-    fn get_l1_contract_address(self: @TContractState) -> EthAddress;
     fn on_receive(
         ref self: TContractState,
         l2_token: ContractAddress,
@@ -48,7 +46,6 @@ mod L2TWAMMBridge {
     pub struct Storage {
         contract_owner_address: ContractAddress,
         token_bridge_helper: ContractAddress,
-        l1_contract_address: EthAddress,
         #[substorage(v0)]
         order_manager: OrderManagerComponent::Storage,
     }
@@ -93,23 +90,15 @@ mod L2TWAMMBridge {
             return true;
         }
 
-        // Admin functionsto set token bridge helper address
+        // Admin functions to set token bridge helper address
         fn set_token_bridge_helper(ref self: ContractState, address: ContractAddress) {
             self.assert_only_owner();
             self.token_bridge_helper.write(address);
         }
 
-        fn set_l1_contract_address(ref self: ContractState, address: EthAddress) {
-            self.assert_only_owner();
-            self.l1_contract_address.write(address);
-        }
         // View functions
         fn get_contract_owner(self: @ContractState) -> ContractAddress {
             return self.contract_owner_address.read();
-        }
-
-        fn get_l1_contract_address(self: @ContractState) -> EthAddress {
-            return self.l1_contract_address.read();
         }
 
         fn get_token_bridge_helper(self: @ContractState) -> ContractAddress {

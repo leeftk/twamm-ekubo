@@ -50,7 +50,8 @@ contract L1TWAMMBridge is Ownable {
     event DepositAndCreateOrder(
         address indexed l1Sender,
         uint256 indexed l2Recipient,
-        uint256 amount
+        uint256 amount,
+        uint256 depositId
     );
     event WithdrawalInitiated(address indexed l1Recipient, uint64 order_id);
 
@@ -98,6 +99,7 @@ contract L1TWAMMBridge is Ownable {
 
     /// @notice Deposits tokens and creates an order on L2
     /// @param params Order parameters including amount, tokens, time range, and fees
+    /// @param _token Address of the token to deposit
     /// @dev Requires msg.value to cover bridge fees
     function depositAndCreateOrder(
         address _token,
@@ -137,12 +139,14 @@ contract L1TWAMMBridge is Ownable {
         emit DepositAndCreateOrder(
             msg.sender,
             l2EndpointAddress,
-            params.amount
+            params.amount,
+            depositId
         );
     }
 
     /// @notice Initiates a withdrawal from L2 to L1
     /// @param params Order parameters including amount, tokens, time range, and fees
+    /// @param order_id ID of the order to withdraw from    
     /// @dev Requires msg.value to cover messaging fees
     function initiateWithdrawal(
         OrderParams memory params,
@@ -169,6 +173,7 @@ contract L1TWAMMBridge is Ownable {
     /// @notice Initiates a request to cancel a deposit
     /// @param params Order parameters including amount, tokens, time range, and fees
     /// @param nonce Unique identifier for the deposit
+    /// @param _depositId ID of the deposit to be canceled    
     function initiateCancelDepositRequest(
         OrderParams memory params,
         uint256 nonce,
@@ -203,6 +208,7 @@ contract L1TWAMMBridge is Ownable {
     /// @notice Reclaims tokens from a cancelled deposit
     /// @param params Order parameters including amount, tokens, time range, and fees
     /// @param nonce Unique identifier for the deposit
+    /// @param _depositId ID of the deposit to be reclaimed    
     function initiateCancelDepositReclaim(
         OrderParams memory params,
         uint256 nonce,
@@ -258,6 +264,7 @@ contract L1TWAMMBridge is Ownable {
     /// @param contractAddress Target contract address on L2
     /// @param selector Function selector on L2
     /// @param payload Message payload
+    /// @param feePaid Fee paid for the message
     function _sendMessage(
         uint256 contractAddress,
         uint256 selector,
