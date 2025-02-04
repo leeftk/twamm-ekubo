@@ -9,14 +9,13 @@ import {IStarknetMessaging} from "../src/interfaces/IStarknetMessaging.sol";
 import {IStarknetTokenBridge} from "../src/interfaces/IStarknetTokenBridge.sol";
 import {IL1TWAMMBridge} from "../src/interfaces/IL1TWAMMBridge.sol";
 
-
 contract DepositAndCreateOrder is Script {
     function run() public {
         // Configuration
         address strkToken = 0xCa14007Eff0dB1f8135f4C25B34De49AB0d42766; //stark on l1 sepolia
         address usdcBuyToken = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238; //usdc on l1 sepolia
         IStarknetMessaging snMessaging = IStarknetMessaging(0xE2Bb56ee936fd6433DC0F6e7e3b8365C906AA057);
-        address bridgeAddress = 0xa68e6fbD09F1309420b608d779cC4Ac124e490A5;
+        address bridgeAddress = 0x0aC40Ee4A9fcE2830c12bAaA7AC6CD60D0289830;
         uint256 l2EndpointAddress = uint256(0x7b8349904d9c71692e79562974356da19063445ec8be1d53fc07cc87ce83ac0);
         uint256 l2FailEndpoint = uint256(0xb3fa26e2af15dda3690ff437257057ad524115b00182928b60d213d50281a6);
         uint256 sellTokenAddress = 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d; //stark on l2
@@ -42,8 +41,8 @@ contract DepositAndCreateOrder is Script {
             sellToken: sellTokenAddress,
             buyToken: buyTokenAddress,
             fee: 170141183460469235273462165868118016,
-            start: 1738585264,
-            end: 1738585392,
+            start: 1738670304,
+            end: 1738670432,
             amount: amount
         });
 
@@ -53,7 +52,7 @@ contract DepositAndCreateOrder is Script {
 
         // IL1TWAMMBridge(bridgeAddress).initiateWithdrawal{value: fee}(params, 565);
 
-        IL1TWAMMBridge(bridgeAddress).initiateCancelDepositRequest(params, 11832, 1);
+        IL1TWAMMBridge(bridgeAddress).initiateCancelDepositRequest(params, 11881, 2);
 
         vm.stopBroadcast();
     }

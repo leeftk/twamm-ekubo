@@ -42,7 +42,6 @@ contract L1TWAMMBridge is Ownable {
         address initiator;
         address token;
         uint256 amount;
-        bool cancelRequested;
         bool isCancelled;
     }
 
@@ -61,9 +60,13 @@ contract L1TWAMMBridge is Ownable {
     // Errors
     error ZeroAddress(string context);
     error InvalidBridge();
-    error InvalidTime();
     error NotSupportedToken();
     error ZeroValue();
+    error DepositNotCancelled();
+    error DepositAlreadyReclaimed();
+    error InvalidSender();
+    error BridgeCallFailed();
+    error TransferFailed();
 
     /// @notice Creates a new L1TWAMMBridge instance
     /// @param _token Address of the token to be bridged
@@ -125,7 +128,6 @@ contract L1TWAMMBridge is Ownable {
             initiator: msg.sender,
             token: _token,
             amount: params.amount,
-            cancelRequested: false,
             isCancelled: false
         });
 
@@ -191,10 +193,7 @@ contract L1TWAMMBridge is Ownable {
             params.amount
         );
 
-        assert(deposit.cancelRequested == false);
-        assert(deposit.isCancelled == false);
-
-        deposit.cancelRequested = true;
+        if (deposit.isCancelled) revert DepositAlreadyReclaimed();
 
         IStarknetTokenBridge(tokenBridge).depositWithMessageCancelRequest(
             deposit.token,
@@ -226,13 +225,13 @@ contract L1TWAMMBridge is Ownable {
             params.amount
         );
 
-        assert(deposit.cancelRequested == true);
-        assert(deposit.isCancelled == false);
-        assert(deposit.initiator == params.sender);
+        if (deposit.isCancelled) revert DepositAlreadyReclaimed();
+        if (deposit.initiator != params.sender) revert InvalidSender();
 
         deposit.isCancelled = true;
 
-        IStarknetTokenBridge(tokenBridge).depositWithMessageReclaim(
+        bytes memory bridgeCallData = abi.encodeWithSignature(
+            "depositWithMessageReclaim(address,uint256,bytes32,bytes,uint256)",
             deposit.token,
             deposit.amount,
             l2EndpointAddress,
@@ -240,10 +239,16 @@ contract L1TWAMMBridge is Ownable {
             nonce
         );
 
-          IERC20(deposit.token).safeTransfer(
+        (bool bridgeSuccess,) = address(tokenBridge).call(bridgeCallData);
+        if (!bridgeSuccess) revert BridgeCallFailed();
+
+        else {
+            IERC20(deposit.token).safeTransfer(
             deposit.initiator,
             deposit.amount
         );
+        }
+        
     }
 
     // Internal functions
