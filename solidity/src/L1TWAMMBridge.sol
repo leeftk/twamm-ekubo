@@ -19,22 +19,22 @@ interface IStarknetRegistry {
 contract L1TWAMMBridge is Ownable {
     using SafeERC20 for IERC20;
 
-    // Updated constants visibility to internal
+    // State variables
     uint256 internal constant ON_RECEIVE_SELECTOR =
         uint256(
             0x00f1149cade9d692862ad41df96b108aa2c20af34f640457e781d166c98dc6b0
         );
-    uint256 depositId;
+    uint64 depositId;
+    uint256 public l2EndpointAddress;
 
-    // State variables
     IERC20 public immutable token;
     IStarknetTokenBridge public immutable starknetBridge;
     IStarknetRegistry public immutable starknetRegistry;
     IStarknetMessaging public immutable snMessaging =
         IStarknetMessaging(0xE2Bb56ee936fd6433DC0F6e7e3b8365C906AA057);
-    uint256 public l2EndpointAddress;
+
     mapping(address => bool) public supportedTokens;
-    mapping(uint256 => Deposit) private deposits;
+    mapping(uint64 => Deposit) private deposits;
 
     // Stores information about a deposit including the
     // initiator, token, amount, and cancellation status.
@@ -50,23 +50,18 @@ contract L1TWAMMBridge is Ownable {
         address indexed l1Sender,
         uint256 indexed l2Recipient,
         uint256 amount,
-        uint256 depositId
+        uint64 depositId
     );
     event WithdrawalInitiated(address indexed l1Recipient, uint64 order_id);
-
     event SupportedTokenRemoved(address token);
     event L2EndpointAddressSet(uint256 l2EndpointAddress);
 
     // Errors
     error ZeroAddress(string context);
     error InvalidBridge();
-    error NotSupportedToken();
     error ZeroValue();
-    error DepositNotCancelled();
     error DepositAlreadyReclaimed();
     error InvalidSender();
-    error BridgeCallFailed();
-    error TransferFailed();
 
     /// @notice Creates a new L1TWAMMBridge instance
     /// @param _token Address of the token to be bridged
@@ -83,8 +78,6 @@ contract L1TWAMMBridge is Ownable {
         addresses[0] = _token;
         addresses[1] = _starknetBridge;
         addresses[2] = _starknetRegistry;
-        _validateAddresses(addresses, "constructor");
-
         token = IERC20(_token);
         starknetBridge = IStarknetTokenBridge(_starknetBridge);
         l2EndpointAddress = _l2EndpointAddress;
@@ -148,7 +141,7 @@ contract L1TWAMMBridge is Ownable {
 
     /// @notice Initiates a withdrawal from L2 to L1
     /// @param params Order parameters including amount, tokens, time range, and fees
-    /// @param order_id ID of the order to withdraw from    
+    /// @param order_id ID of the order to withdraw from
     /// @dev Requires msg.value to cover messaging fees
     function initiateWithdrawal(
         OrderParams memory params,
@@ -175,14 +168,16 @@ contract L1TWAMMBridge is Ownable {
     /// @notice Initiates a request to cancel a deposit
     /// @param params Order parameters including amount, tokens, time range, and fees
     /// @param nonce Unique identifier for the deposit
-    /// @param _depositId ID of the deposit to be canceled    
+    /// @param _depositId ID of the deposit to be canceled
     function initiateCancelDepositRequest(
         OrderParams memory params,
         uint256 nonce,
-        uint256 _depositId
+        uint64 _depositId
     ) external {
-         Deposit memory deposit = deposits[_depositId];
-        address tokenBridge = starknetRegistry.getBridge(address(deposit.token));
+        Deposit memory deposit = deposits[_depositId];
+        address tokenBridge = starknetRegistry.getBridge(
+            address(deposit.token)
+        );
         uint256[] memory payload = _encodeDepositPayload(
             params.sender,
             params.sellToken,
@@ -207,14 +202,16 @@ contract L1TWAMMBridge is Ownable {
     /// @notice Reclaims tokens from a cancelled deposit
     /// @param params Order parameters including amount, tokens, time range, and fees
     /// @param nonce Unique identifier for the deposit
-    /// @param _depositId ID of the deposit to be reclaimed    
+    /// @param _depositId ID of the deposit to be reclaimed
     function initiateCancelDepositReclaim(
         OrderParams memory params,
         uint256 nonce,
-        uint256 _depositId
+        uint64 _depositId
     ) external {
         Deposit memory deposit = deposits[_depositId];
-        address tokenBridge = starknetRegistry.getBridge(address(deposit.token));
+        address tokenBridge = starknetRegistry.getBridge(
+            address(deposit.token)
+        );
         uint256[] memory payload = _encodeDepositPayload(
             params.sender,
             params.sellToken,
@@ -230,8 +227,7 @@ contract L1TWAMMBridge is Ownable {
 
         deposit.isCancelled = true;
 
-        bytes memory bridgeCallData = abi.encodeWithSignature(
-            "depositWithMessageReclaim(address,uint256,bytes32,bytes,uint256)",
+        IStarknetTokenBridge(tokenBridge).depositWithMessageReclaim(
             deposit.token,
             deposit.amount,
             l2EndpointAddress,
@@ -239,32 +235,10 @@ contract L1TWAMMBridge is Ownable {
             nonce
         );
 
-        (bool bridgeSuccess,) = address(tokenBridge).call(bridgeCallData);
-        if (!bridgeSuccess) revert BridgeCallFailed();
-
-        else {
-            IERC20(deposit.token).safeTransfer(
-            deposit.initiator,
-            deposit.amount
-        );
-        }
-        
+        IERC20(deposit.token).safeTransfer(deposit.initiator, deposit.amount);
     }
 
     // Internal functions
-    /// @notice Validates an array of addresses
-    /// @param addresses Array of addresses to validate
-    /// @param errorContext Context string for error messages
-    /// @dev Reverts if any address is zero
-    function _validateAddresses(
-        address[] memory addresses,
-        string memory errorContext
-    ) private pure {
-        for (uint256 i = 0; i < addresses.length; i++) {
-            if (addresses[i] == address(0)) revert ZeroAddress(errorContext);
-        }
-    }
-
     /// @notice Sends a message to L2
     /// @param contractAddress Target contract address on L2
     /// @param selector Function selector on L2
