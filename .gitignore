@@ -1,0 +1,31 @@
+# Compiler files
+cache/
+out/
+out.json
+
+# Ignores development broadcast logs
+!/broadcast
+/broadcast/*/31337/
+/broadcast/*/11155111/
+/broadcast/**/dry-run/
+/broadcast/
+
+# Docs
+docs/
+
+# Dotenv file
+.env
+
+target
+/scripts.md
+/scripts.pdf
+snfoundry_trace
+.snfoundry_cache
+.DS_Store
+
+cache/
+out/
+forge-cache/
+broadcast/
+coverage/
+snfoundry_trace/

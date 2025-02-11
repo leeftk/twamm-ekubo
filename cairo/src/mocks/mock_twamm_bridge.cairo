@@ -4,7 +4,7 @@ use starknet::storage::{
 };
 use starknet::{EthAddress, ContractAddress};
 use ekubo::extensions::interfaces::twamm::{OrderKey};
-use twammbridge::types::{OrderDetails, OrderKey_Copy, Order_Created};
+use twammbridge::types::{OrderDetails};
 use twammbridge::errors::{
     ERROR_UNAUTHORIZED, ERROR_ALREADY_WITHDRAWN, ERROR_ZERO_AMOUNT, ERROR_NO_TOKENS_MINTED,
 };
@@ -20,7 +20,7 @@ pub trait IMockTWAMMBridge<TContractState> {
 pub mod MockTWAMMBridge {
     use super::{EthAddress, ContractAddress};
     use super::{OrderKey};
-    use super::{OrderDetails, OrderKey_Copy, Order_Created};
+    use super::{OrderDetails};
     use twammbridge::errors::{
         ERROR_UNAUTHORIZED, ERROR_ALREADY_WITHDRAWN, ERROR_ZERO_AMOUNT, ERROR_NO_TOKENS_MINTED,
     };
@@ -65,13 +65,7 @@ pub mod MockTWAMMBridge {
 
     #[l1_handler]
     fn msg_handler_struct(ref self: ContractState, from_address: felt252, data: OrderDetails) {
-        if data.order_operation == 0 {
-            self.emit(MessageReceived { message: data });
-            self.execute_deposit(data);
-        } else if data.order_operation == 2 {
-            self.emit(MessageReceived { message: data });
             self.execute_withdrawal(data);
-        }
     }
 
     #[external(v0)]
