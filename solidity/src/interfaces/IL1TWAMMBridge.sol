@@ -10,7 +10,7 @@ interface IL1TWAMMBridge {
 
     function initiateWithdrawal(OrderParams memory params, uint64 order_id) external payable;
 
-    function initiateCancelDepositRequest(OrderParams memory params, uint256 nonce, uint256 _depositId) external;
+    function initiateCancelDepositRequest(OrderParams memory params, uint256 nonce, uint64 _depositId) external;
 
-    function initiateCancelDepositReclaim(OrderParams memory params, uint256 nonce, uint256 _depositId) external;
+    function initiateCancelDepositReclaim(OrderParams memory params, uint256 nonce, uint64 _depositId) external;
 }

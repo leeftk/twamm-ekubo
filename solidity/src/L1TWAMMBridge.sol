@@ -33,7 +33,6 @@ contract L1TWAMMBridge is Ownable {
     IStarknetMessaging public immutable snMessaging =
         IStarknetMessaging(0xE2Bb56ee936fd6433DC0F6e7e3b8365C906AA057);
 
-    mapping(address => bool) public supportedTokens;
     mapping(uint64 => Deposit) private deposits;
 
     // Stores information about a deposit including the
@@ -82,7 +81,6 @@ contract L1TWAMMBridge is Ownable {
         starknetBridge = IStarknetTokenBridge(_starknetBridge);
         l2EndpointAddress = _l2EndpointAddress;
         starknetRegistry = IStarknetRegistry(_starknetRegistry);
-        supportedTokens[_token] = true;
     }
 
     /// @notice Validates if a bridge exists for the given token
